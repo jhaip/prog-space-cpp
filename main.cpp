@@ -18,6 +18,9 @@ struct Term {
         } else if (input[0] == '%') {
             type = "postfix";
             value = input.substr(1);
+        } else if (input[0] == '#') { // this may be difference syntax than prog-space
+            type = "id";
+            value = input.substr(1);
         } else {
             value = input;
         }
@@ -28,6 +31,8 @@ struct Term {
             return "$" + value;
         } else if (type == "postfix") {
             return "%" + value;
+        } else if (type == "id") {
+            return "#" + value;
         }
         return value;
     }
@@ -195,6 +200,18 @@ public:
             callback_func(result.toLuaType());
         }
     }
+
+    void cleanup(std::string id) {
+        std::vector<std::string> keysToDelete;
+        for (const auto& n : facts) {
+            if (n.second.terms[0].value == id) {
+                keysToDelete.push_back(n.first);
+            }
+        }
+        for (const auto& factKey : keysToDelete) {
+            facts.erase(factKey);
+        }
+    }
 };
 
 std::string my_function( int a, std::string b ) {
@@ -219,7 +236,7 @@ int main () {
 
         // open those basic lua libraries 
         // again, for print() and other basic utilities
-        lua.open_libraries(sol::lib::base);
+        lua.open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::string, sol::lib::io, sol::lib::os);
 
         lua["my_func"] = my_function; // way 1
         lua.set("my_func", my_function); // way 2
@@ -238,6 +255,7 @@ int main () {
         lua["query"] = my_query;
         lua.set_function("claim", &Database::claim, &db);
         lua.set_function("when", &Database::when, &db);
+        lua.set_function("cleanup", &Database::cleanup, &db);
 
         lua.script(R"(
             query('Da', function (results)
@@ -255,6 +273,7 @@ int main () {
         sol::load_result script3 = lua.load_file("whensomeoneisafox.lua");
         sol::load_result script4 = lua.load_file("whentime.lua");
         sol::load_result script5 = lua.load_file("isananimal.lua");
+        sol::load_result script6 = lua.load_file("timeis.lua");
         // std::vector<sol::load_result> scripts = {
         //     lua.load_file("foxisred.lua"),
         //     lua.load_file("isananimal.lua"),
@@ -267,11 +286,17 @@ int main () {
         //     script();
         // }
         auto start = high_resolution_clock::now();
-        script1();
-        script2();
-        script3();
-        script4();
-        script5();
+        int count = 0;
+        while (count < 1000) {
+            script1();
+            script2();
+            script3();
+            script4();
+            script5();
+            script6();
+            
+            count++;
+        }
         auto stop = high_resolution_clock::now();
         auto duration = duration_cast<microseconds>(stop - start);
         std::cout << duration.count() << " us" << std::endl;
