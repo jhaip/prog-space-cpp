@@ -1,2 +1,10 @@
-*.out
-lua-5.4.4
+CMakeLists.txt.user
+
+.DS_Store
+
+/.vs
+/.vscode
+
+/CMakeSettings.json
+
+/build*

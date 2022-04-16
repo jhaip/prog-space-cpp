@@ -1,0 +1,6 @@
+[requires]
+lua/5.4.4
+sol2/3.2.3
+
+[generators]
+cmake

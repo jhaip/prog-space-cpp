@@ -1,12 +1,21 @@
 # prog-space-cpp
 Experimental c++ and lua version of a programmable-space
 
-Compile
 ```
-g++ -std=c++17 -Isol -llua -Llua-5.4.4/src -Ilua-5.4.4/src main.cpp
+$ mkdir build && cd build
+
+$ conan install ..
+
+(win)
+$ cmake .. -G "Visual Studio 16"
+$ cmake --build . --config Release
+
+(linux, mac)
+$ cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+$ cmake --build .
 ```
 
-Run
+Running, from project root:
 ```
-./a.out
+./build/bin/ProgSpace
 ```
