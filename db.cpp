@@ -185,14 +185,18 @@ public:
         facts.emplace(fact_string, Fact{fact_string});
     }
 
-    void when(std::vector<std::string> query_parts, sol::protected_function callback_func) {
-        if (debug) std::cout << "When" << std::endl;
+    std::vector<QueryResult> select(std::vector<std::string> query_parts) {
         std::vector<Fact> query;
         for (const auto &query_str : query_parts) {
             if (debug) std::cout << query_str << std::endl;
             query.push_back(Fact{query_str});
         }
-        std::vector<QueryResult> results = collect_solutions(facts, query, QueryResult{});
+        return collect_solutions(facts, query, QueryResult{});
+    }
+
+    void when(std::vector<std::string> query_parts, sol::protected_function callback_func) {
+        if (debug) std::cout << "When" << std::endl;
+        auto results = select(query_parts);
         if (debug) std::cout << "RESULTS:" << std::endl;
         for (const auto &result : results) {
             if (debug) std::cout << "    " << result.toString() << std::endl;

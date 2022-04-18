@@ -88,6 +88,16 @@ int main () {
             // script6();
 
             window.clear();
+
+            auto graphicsWishes = db.select({"$ wish text $text at $x $y"});
+            for (const auto &wish : graphicsWishes) {
+                sf::Text text;
+                text.setFont(font);
+                text.setString(wish.Result.at("text").value);
+                text.setFillColor(sf::Color::Red);
+                text.setPosition(std::stod(wish.Result.at("x").value), std::stod(wish.Result.at("y").value));
+                window.draw(text);
+            }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
                 sf::CircleShape shape(100.f);
                 shape.setFillColor(sf::Color::Green);
