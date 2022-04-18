@@ -4,7 +4,7 @@ project(ProgSpace)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} arucotest.cpp)
 
 add_definitions("-std=c++17")
 #Set C++17
