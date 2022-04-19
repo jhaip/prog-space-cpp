@@ -1,12 +1,21 @@
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
 #include <SFML/Graphics.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/aruco.hpp>
 #include <iostream>
 #include <map>
+#include <thread>
 
 #include "db.cpp"
 
 using namespace std::chrono;
+using namespace cv;
+
+std::atomic_bool stop_cv_thread{false};
+std::mutex myMutex;
+std::atomic_bool new_data_available{false};
+std::vector<int> seen_program_ids;
 
 std::string my_function( int a, std::string b ) {
         // Create a string with the letter 'D' "a" times,
@@ -22,7 +31,32 @@ void my_query(std::string a, sol::protected_function f) {
     }
 }
 
+void cvLoop() {
+    VideoCapture inputVideo;
+    inputVideo.open(0);
+    cv::Mat cameraMatrix;
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_1000);
+    while (!stop_cv_thread && inputVideo.grab()) {
+        cv::Mat image, imageCopy;
+        inputVideo.retrieve(image);
+        image.copyTo(imageCopy);
+        std::vector<int> ids;
+        std::vector<std::vector<cv::Point2f>> corners;
+        cv::aruco::detectMarkers(image, dictionary, corners, ids);
+        if (ids.size() > 0) {
+            cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
+            // std::cout << "Seen ID" << ids[0] << std::endl;
+        }
+        // do something with imageCopy
+        std::lock_guard<std::mutex> guard(myMutex);
+        seen_program_ids = ids;
+        new_data_available = true;
+    }
+    std::cout << "thread died" << std::endl;
+}
+
 int main () {
+        std::thread cvThread(cvLoop);
 
         Database db{};
 
@@ -58,6 +92,8 @@ int main () {
         //     script();
         // }
 
+        std::vector<int> main_seen_program_ids;
+
         sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
         sf::Font font;
         // TODO: find font into project and load that
@@ -67,6 +103,7 @@ int main () {
 
         while (window.isOpen())
         {
+            // std::cout << "1";
             sf::Event event;
             while (window.pollEvent(event))
             {
@@ -77,6 +114,15 @@ int main () {
                         std::cout << "Enter pressed" << std::endl;
                         db.print();
                     }
+                }
+            }
+
+            {
+                std::lock_guard<std::mutex> guard(myMutex);
+                if (new_data_available) {
+                    new_data_available = false;
+                    main_seen_program_ids = seen_program_ids;
+                    // std::cout << "NEW DATA!" << std::endl;
                 }
             }
 
@@ -115,13 +161,16 @@ int main () {
             } else {
                 db.cleanup("5");
             }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
+            if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), 49) != main_seen_program_ids.end()) {
                 script6();
             } else {
                 db.cleanup("3");
             }
             window.display();
         }
+
+        stop_cv_thread = true;
+        cvThread.join();
 
         return 0;
 }
