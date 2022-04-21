@@ -64,7 +64,7 @@ int main () {
 
         // open those basic lua libraries 
         // again, for print() and other basic utilities
-        lua.open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::string, sol::lib::io, sol::lib::os);
+        lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::coroutine, sol::lib::string, sol::lib::io, sol::lib::os);
 
         lua["my_func"] = my_function; // way 1
         lua.set("my_func", my_function); // way 2
@@ -80,6 +80,7 @@ int main () {
         sol::load_result script4 = lua.load_file("whentime.lua");
         sol::load_result script5 = lua.load_file("isananimal.lua");
         sol::load_result script6 = lua.load_file("timeis.lua");
+        sol::load_result script9 = lua.load_file("9__animation.lua");
         // std::vector<sol::load_result> scripts = {
         //     lua.load_file("foxisred.lua"),
         //     lua.load_file("isananimal.lua"),
@@ -101,6 +102,7 @@ int main () {
             // error...
         }
 
+        int loopCount = 0;
         while (window.isOpen())
         {
             // std::cout << "1";
@@ -126,17 +128,21 @@ int main () {
                 }
             }
 
+            db.cleanup("0");
+            db.claim("#0 clock time is " + std::to_string(loopCount));
+            loopCount += 1;
             script1();
             script2();
             script3();
             // script4();
             script5();
             // script6();
+            script9();
 
             window.clear();
 
-            auto graphicsWishes = db.select({"$ wish text $text at $x $y"});
-            for (const auto &wish : graphicsWishes) {
+            auto textGraphicsWishes = db.select({"$ wish text $text at $x $y"});
+            for (const auto &wish : textGraphicsWishes) {
                 sf::Text text;
                 text.setFont(font);
                 text.setString(wish.Result.at("text").value);
@@ -144,6 +150,16 @@ int main () {
                 text.setPosition(std::stod(wish.Result.at("x").value), std::stod(wish.Result.at("y").value));
                 window.draw(text);
             }
+            auto lineGraphicsWishes = db.select({"$ wish line from $x1 $y1 to $x2 $y2"});
+            for (const auto &wish : lineGraphicsWishes) {
+                sf::Vertex line[] =
+                {
+                    sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x1").value), std::stod(wish.Result.at("y1").value))),
+                    sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x2").value), std::stod(wish.Result.at("y2").value))),
+                };
+                window.draw(line, 2, sf::Lines);
+            }
+
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
                 sf::CircleShape shape(100.f);
                 shape.setFillColor(sf::Color::Green);
