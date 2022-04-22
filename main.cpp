@@ -1,8 +1,10 @@
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
 #include <SFML/Graphics.hpp>
+#include <opencv2/core/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/aruco.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 #include <map>
 #include <thread>
@@ -17,6 +19,7 @@ std::mutex myMutex;
 std::atomic_bool new_data_available{false};
 std::vector<int> seen_program_ids;
 std::vector<std::vector<cv::Point2f>> seen_program_corners;
+cv::Mat latestFrame;
 
 std::string my_function( int a, std::string b ) {
         // Create a string with the letter 'D' "a" times,
@@ -52,6 +55,7 @@ void cvLoop() {
         std::lock_guard<std::mutex> guard(myMutex);
         seen_program_ids = ids;
         seen_program_corners = corners;
+        imageCopy.copyTo(latestFrame);
         new_data_available = true;
     }
     std::cout << "thread died" << std::endl;
@@ -98,8 +102,12 @@ int main () {
 
         std::vector<int> main_seen_program_ids;
         std::vector<std::vector<cv::Point2f>> main_seen_program_corners;
+        cv::Mat main_latestFrame;
+        sf::Image latestFrameImage;
+        sf::Texture latestFrameTexture;
+        sf::Sprite latestFrameSprite;
 
-        sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
+        sf::RenderWindow window(sf::VideoMode(800, 800), "SFML works!");
         sf::Font font;
         // TODO: find font into project and load that
         if (!font.loadFromFile("/System/Library/Fonts/Supplemental/Arial.ttf")) {
@@ -131,7 +139,7 @@ int main () {
             currentTime = clock.getElapsedTime();
             if (currentTime.asSeconds() - previousTime.asSeconds() > 1.0f/60.0f) {
                 fps = 1.0f / (currentTime.asSeconds() - previousTime.asSeconds()); // the asSeconds returns a float
-                std::cout << "fps =" << floor(fps) << std::endl; // flooring it will make the frame rate a rounded number
+                // std::cout << "fps =" << floor(fps) << std::endl; // flooring it will make the frame rate a rounded number
                 previousTime = currentTime;
 
                 {
@@ -140,6 +148,11 @@ int main () {
                         new_data_available = false;
                         main_seen_program_ids = seen_program_ids;
                         main_seen_program_corners = seen_program_corners;
+                        cv::cvtColor(latestFrame, main_latestFrame, cv::COLOR_BGR2RGBA);
+                        latestFrameImage.create(main_latestFrame.cols, main_latestFrame.rows, main_latestFrame.ptr());
+                        if (latestFrameTexture.loadFromImage(latestFrameImage)) {
+                            latestFrameSprite.setTexture(latestFrameTexture);
+                        }
                         // std::cout << "NEW DATA!" << std::endl;
                     }
                 }
@@ -192,6 +205,13 @@ int main () {
                         sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x2").value), std::stod(wish.Result.at("y2").value))),
                     };
                     window.draw(line, 2, sf::Lines);
+                }
+                auto frameGraphicsWishes = db.select({"$ wish frame at $x $y scale $s"});
+                for (const auto &wish : frameGraphicsWishes) {
+                    latestFrameSprite.setPosition(sf::Vector2f(std::stod(wish.Result.at("x").value), std::stod(wish.Result.at("y").value)));
+                    float s = std::stod(wish.Result.at("s").value);
+                    latestFrameSprite.setScale(s, s);
+                    window.draw(latestFrameSprite);
                 }
 
                 sf::Text fpsText;
