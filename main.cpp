@@ -16,6 +16,7 @@ std::atomic_bool stop_cv_thread{false};
 std::mutex myMutex;
 std::atomic_bool new_data_available{false};
 std::vector<int> seen_program_ids;
+std::vector<std::vector<cv::Point2f>> seen_program_corners;
 
 std::string my_function( int a, std::string b ) {
         // Create a string with the letter 'D' "a" times,
@@ -50,6 +51,7 @@ void cvLoop() {
         // do something with imageCopy
         std::lock_guard<std::mutex> guard(myMutex);
         seen_program_ids = ids;
+        seen_program_corners = corners;
         new_data_available = true;
     }
     std::cout << "thread died" << std::endl;
@@ -81,6 +83,7 @@ int main () {
         sol::load_result script5 = lua.load_file("isananimal.lua");
         sol::load_result script6 = lua.load_file("timeis.lua");
         sol::load_result script9 = lua.load_file("9__animation.lua");
+        sol::load_result script10 = lua.load_file("10__outlinePrograms.lua");
         // std::vector<sol::load_result> scripts = {
         //     lua.load_file("foxisred.lua"),
         //     lua.load_file("isananimal.lua"),
@@ -130,6 +133,12 @@ int main () {
 
             db.cleanup("0");
             db.claim("#0 clock time is " + std::to_string(loopCount));
+            int index = 0;
+            for (auto& id : seen_program_ids) {
+                cv::Point2f corner = seen_program_corners.at(index).at(0);
+                db.claim("#0 program "+std::to_string(id)+" at "+std::to_string(corner.x)+" "+std::to_string(corner.y));
+                index += 1;
+            }
             loopCount += 1;
             script1();
             script2();
@@ -138,6 +147,7 @@ int main () {
             script5();
             // script6();
             script9();
+            script10();
 
             window.clear();
 
