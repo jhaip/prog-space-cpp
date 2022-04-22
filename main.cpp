@@ -97,6 +97,7 @@ int main () {
         // }
 
         std::vector<int> main_seen_program_ids;
+        std::vector<std::vector<cv::Point2f>> main_seen_program_corners;
 
         sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
         sf::Font font;
@@ -104,6 +105,11 @@ int main () {
         if (!font.loadFromFile("/System/Library/Fonts/Supplemental/Arial.ttf")) {
             // error...
         }
+
+        float fps;
+        sf::Clock clock;
+        sf::Time previousTime = clock.getElapsedTime();
+        sf::Time currentTime;
 
         int loopCount = 0;
         while (window.isOpen())
@@ -122,77 +128,82 @@ int main () {
                 }
             }
 
-            {
-                std::lock_guard<std::mutex> guard(myMutex);
-                if (new_data_available) {
-                    new_data_available = false;
-                    main_seen_program_ids = seen_program_ids;
-                    // std::cout << "NEW DATA!" << std::endl;
-                }
-            }
+            currentTime = clock.getElapsedTime();
+            if (currentTime.asSeconds() - previousTime.asSeconds() > 1.0f/60.0f) {
+                fps = 1.0f / (currentTime.asSeconds() - previousTime.asSeconds()); // the asSeconds returns a float
+                std::cout << "fps =" << floor(fps) << std::endl; // flooring it will make the frame rate a rounded number
+                previousTime = currentTime;
 
-            db.cleanup("0");
-            db.claim("#0 clock time is " + std::to_string(loopCount));
-            int index = 0;
-            for (auto& id : seen_program_ids) {
-                cv::Point2f corner = seen_program_corners.at(index).at(0);
-                db.claim("#0 program "+std::to_string(id)+" at "+std::to_string(corner.x)+" "+std::to_string(corner.y));
-                index += 1;
-            }
-            loopCount += 1;
-            script1();
-            script2();
-            script3();
-            // script4();
-            script5();
-            // script6();
-            script9();
-            script10();
-
-            window.clear();
-
-            auto textGraphicsWishes = db.select({"$ wish text $text at $x $y"});
-            for (const auto &wish : textGraphicsWishes) {
-                sf::Text text;
-                text.setFont(font);
-                text.setString(wish.Result.at("text").value);
-                text.setFillColor(sf::Color::Red);
-                text.setPosition(std::stod(wish.Result.at("x").value), std::stod(wish.Result.at("y").value));
-                window.draw(text);
-            }
-            auto lineGraphicsWishes = db.select({"$ wish line from $x1 $y1 to $x2 $y2"});
-            for (const auto &wish : lineGraphicsWishes) {
-                sf::Vertex line[] =
                 {
-                    sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x1").value), std::stod(wish.Result.at("y1").value))),
-                    sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x2").value), std::stod(wish.Result.at("y2").value))),
-                };
-                window.draw(line, 2, sf::Lines);
-            }
+                    std::lock_guard<std::mutex> guard(myMutex);
+                    if (new_data_available) {
+                        new_data_available = false;
+                        main_seen_program_ids = seen_program_ids;
+                        main_seen_program_corners = seen_program_corners;
+                        // std::cout << "NEW DATA!" << std::endl;
+                    }
+                }
 
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-                sf::CircleShape shape(100.f);
-                shape.setFillColor(sf::Color::Green);
-                window.draw(shape);
+                db.cleanup("0");
+                db.claim("#0 clock time is " + std::to_string(loopCount));
+                int index = 0;
+                for (auto& id : main_seen_program_ids) {
+                    cv::Point2f corner = main_seen_program_corners.at(index).at(0);
+                    db.claim("#0 program "+std::to_string(id)+" at "+std::to_string(corner.x)+" "+std::to_string(corner.y));
+                    index += 1;
+                }
+                loopCount += 1;
+                script1();
+                script2();
+                script3();
+                // script4();
+                script5();
+                // script6();
+                script9();
+                script10();
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
+                    script4();
+                } else {
+                    db.cleanup("5");
+                }
+                if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), 49) != main_seen_program_ids.end()) {
+                    script6();
+                } else {
+                    db.cleanup("3");
+                }
+
+                window.clear();
+
+                auto textGraphicsWishes = db.select({"$ wish text $text at $x $y"});
+                for (const auto &wish : textGraphicsWishes) {
+                    sf::Text text;
+                    text.setFont(font);
+                    text.setString(wish.Result.at("text").value);
+                    text.setFillColor(sf::Color::Red);
+                    text.setPosition(std::stod(wish.Result.at("x").value), std::stod(wish.Result.at("y").value));
+                    window.draw(text);
+                }
+                auto lineGraphicsWishes = db.select({"$ wish line from $x1 $y1 to $x2 $y2"});
+                for (const auto &wish : lineGraphicsWishes) {
+                    sf::Vertex line[] =
+                    {
+                        sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x1").value), std::stod(wish.Result.at("y1").value))),
+                        sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x2").value), std::stod(wish.Result.at("y2").value))),
+                    };
+                    window.draw(line, 2, sf::Lines);
+                }
+
+                sf::Text fpsText;
+                fpsText.setFont(font);
+                fpsText.setString(std::to_string(fps));
+                fpsText.setFillColor(sf::Color::Yellow);
+                fpsText.setPosition(0, 50);
+                window.draw(fpsText);
+
+
+                window.display();
             }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-                sf::Text text;
-                text.setFont(font);
-                text.setString("Hello");
-                text.setFillColor(sf::Color::Red);
-                window.draw(text);
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
-                script4();
-            } else {
-                db.cleanup("5");
-            }
-            if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), 49) != main_seen_program_ids.end()) {
-                script6();
-            } else {
-                db.cleanup("3");
-            }
-            window.display();
         }
 
         stop_cv_thread = true;
