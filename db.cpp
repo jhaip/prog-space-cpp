@@ -25,6 +25,11 @@ struct Term {
         }
     }
 
+    bool operator==(const Term &other) const
+    {
+        return type == other.type && value == other.value;
+    }
+
     std::string toString() const {
         if (type == "variable") {
             return "$" + value;
@@ -50,6 +55,11 @@ std::string terms_to_string(std::vector<Term> terms) {
 
 struct QueryResult {
     std::map<std::string, Term> Result;
+
+    bool operator==(const QueryResult &other) const
+    {
+        return Result == other.Result;
+    }
 
     std::string toString() const {
         std::string s;
@@ -168,15 +178,34 @@ std::vector<QueryResult> collect_solutions(std::map<std::string, Fact> facts, st
     return solutions;
 }
 
-class Database {
+class Subscription
+{
+public:
+    std::string program_source_id;
+    std::vector<std::string> query_parts;
+    // TODO: callback_func environment;
+    sol::protected_function callback_func;
+    std::vector<QueryResult> last_results;
+
+    Subscription(std::string s, std::vector<std::string> qp, sol::protected_function c) : program_source_id(s), query_parts(qp), callback_func(c) {}
+};
+
+class Database
+{
 public:
     std::map<std::string, Fact> facts;
+    std::vector<Subscription> subscriptions;
     bool debug = false;
 
     void print() {
         std::cout << "DATABASE:" << std::endl;
         for (const auto& n : facts) {
             std::cout << n.second.toString() << std::endl;
+        }
+        std::cout << "SUBS:" << std::endl;
+        for (const auto &s : subscriptions)
+        {
+            std::cout << "sub from: " << s.program_source_id << std::endl;
         }
     }
 
@@ -201,6 +230,28 @@ public:
         for (const auto &result : results) {
             if (debug) std::cout << "    " << result.toString() << std::endl;
             callback_func(result.toLuaType());
+        }
+    }
+
+    void register_when(std::string source, std::vector<std::string> query_parts, sol::protected_function callback_func) {
+        subscriptions.push_back(Subscription{source, query_parts, callback_func});
+    }
+
+    void run_subscriptions() {
+        for (auto &sub : subscriptions) {
+            auto results = select(sub.query_parts);
+            if (sub.last_results != results) {
+                std::cout << "RESULTS are different!:" << std::endl;
+                sub.last_results =  results;
+                if (debug)
+                    std::cout << "RESULTS:" << std::endl;
+                for (const auto &result : results) 
+                {
+                    if (debug)
+                        std::cout << "    " << result.toString() << std::endl;
+                    sub.callback_func(result.toLuaType());
+                }
+            }
         }
     }
 

@@ -51,7 +51,6 @@ void cvLoop() {
             cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
             // std::cout << "Seen ID" << ids[0] << std::endl;
         }
-        // do something with imageCopy
         std::lock_guard<std::mutex> guard(myMutex);
         seen_program_ids = ids;
         seen_program_corners = corners;
@@ -79,6 +78,8 @@ int main () {
         lua.set_function("claim", &Database::claim, &db);
         lua.set_function("when", &Database::when, &db);
         lua.set_function("cleanup", &Database::cleanup, &db);
+        lua.set_function("register_when", &Database::register_when, &db);
+        
 
         sol::load_result script1 = lua.load_file("foxisred.lua");
         sol::load_result script2 = lua.load_file("youisafox.lua");
@@ -88,6 +89,7 @@ int main () {
         sol::load_result script6 = lua.load_file("timeis.lua");
         sol::load_result script9 = lua.load_file("9__animation.lua");
         sol::load_result script10 = lua.load_file("10__outlinePrograms.lua");
+        sol::load_result script11 = lua.load_file("11__counting.lua");
         // std::vector<sol::load_result> scripts = {
         //     lua.load_file("foxisred.lua"),
         //     lua.load_file("isananimal.lua"),
@@ -119,10 +121,11 @@ int main () {
         sf::Time previousTime = clock.getElapsedTime();
         sf::Time currentTime;
 
+        script11();
+
         int loopCount = 0;
         while (window.isOpen())
         {
-            // std::cout << "1";
             sf::Event event;
             while (window.pollEvent(event))
             {
@@ -174,6 +177,8 @@ int main () {
                 // script6();
                 script9();
                 script10();
+
+                db.run_subscriptions();
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
                     script4();
