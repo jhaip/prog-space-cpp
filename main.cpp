@@ -78,6 +78,7 @@ int main () {
         lua.set_function("claim", &Database::claim, &db);
         lua.set_function("when", &Database::when, &db);
         lua.set_function("cleanup", &Database::cleanup, &db);
+        lua.set_function("retract", &Database::retract, &db);
         lua.set_function("register_when", &Database::register_when, &db);
         
 
@@ -90,6 +91,7 @@ int main () {
         sol::load_result script9 = lua.load_file("9__animation.lua");
         sol::load_result script10 = lua.load_file("10__outlinePrograms.lua");
         sol::load_result script11 = lua.load_file("11__counting.lua");
+        sol::load_result script12 = lua.load_file("../../scripts/12__particle.lua"); 
         // std::vector<sol::load_result> scripts = {
         //     lua.load_file("foxisred.lua"),
         //     lua.load_file("isananimal.lua"),
@@ -122,6 +124,7 @@ int main () {
         sf::Time currentTime;
 
         script11();
+        script12();
 
         int loopCount = 0;
         while (window.isOpen())

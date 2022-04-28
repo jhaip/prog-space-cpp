@@ -4,6 +4,8 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <chrono>
+using namespace std::chrono;
 
 struct Term {
     std::string type;
@@ -98,9 +100,19 @@ public:
     std::string toString() const {
         return terms_to_string(terms);
     }
+
+    bool fact_has_variables_or_wildcards() {
+        for (const auto &t : terms)
+        {
+            if (t.type == "variable" || t.type == "postfix") {
+                return true;
+            }
+        }
+        return false;
+    }
 };
 
-std::tuple<bool, QueryResult> term_match(const Term A, const Term B, const QueryResult env) {
+std::tuple<bool, QueryResult> term_match(const Term &A, const Term &B, const QueryResult &env) {
     if (A.type == "variable" || A.type == "postfix") {
         auto variable_name = A.value;
         // "Wilcard" matches all but doesn't have a result
@@ -123,7 +135,7 @@ std::tuple<bool, QueryResult> term_match(const Term A, const Term B, const Query
     return {false, QueryResult{}};
 }
 
-std::tuple<bool, QueryResult> fact_match(Fact A, Fact B, QueryResult env) {
+std::tuple<bool, QueryResult> fact_match(const Fact &A, const Fact &B, const QueryResult &env) {
     if (A.terms.at(A.terms.size()-1).type == "postfix") {
         if (A.terms.size() > B.terms.size()) {
             return {false, QueryResult{}};
@@ -155,7 +167,9 @@ std::tuple<bool, QueryResult> fact_match(Fact A, Fact B, QueryResult env) {
     return {true, new_env};
 }
 
-std::vector<QueryResult> collect_solutions(std::map<std::string, Fact> facts, std::vector<Fact> query, QueryResult env) {
+std::vector<QueryResult> collect_solutions(const std::map<std::string, Fact> &facts, const std::vector<Fact> &query, const QueryResult &env) {
+    auto start = high_resolution_clock::now();
+    // std::cout << "collect solutions" << std::endl;
     if (query.size() == 0) {
         return {env};
     }
@@ -165,6 +179,7 @@ std::vector<QueryResult> collect_solutions(std::map<std::string, Fact> facts, st
         keys.push_back(n.first);
     }
     std::sort(keys.begin(), keys.end());
+    // std::cout << "done sorting " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
     for (const auto& k : keys) {
         auto [did_match, new_env] = fact_match(query[0], facts.at(k), env);
         if (did_match) {
@@ -175,6 +190,7 @@ std::vector<QueryResult> collect_solutions(std::map<std::string, Fact> facts, st
             }
         }
     }
+    // std::cout << "done looking for matches " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
     return solutions;
 }
 
@@ -215,12 +231,16 @@ public:
     }
 
     std::vector<QueryResult> select(std::vector<std::string> query_parts) {
+        auto start = high_resolution_clock::now();
         std::vector<Fact> query;
         for (const auto &query_str : query_parts) {
             if (debug) std::cout << query_str << std::endl;
             query.push_back(Fact{query_str});
         }
-        return collect_solutions(facts, query, QueryResult{});
+        std::cout << "make query: " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
+        auto r = collect_solutions(facts, query, QueryResult{});
+        std::cout << "get solutions: " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
+        return r;
     }
 
     void when(std::vector<std::string> query_parts, sol::protected_function callback_func) {
@@ -238,11 +258,14 @@ public:
     }
 
     void run_subscriptions() {
+        auto start = high_resolution_clock::now();
         for (auto &sub : subscriptions) {
             auto results = select(sub.query_parts);
+            std::cout << "1 " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
             if (sub.last_results != results) {
-                std::cout << "RESULTS are different!:" << std::endl;
-                sub.last_results =  results;
+                // std::cout << "RESULTS are different!:" << std::endl;
+                sub.last_results = results;
+                std::cout << "2 " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
                 if (debug)
                     std::cout << "RESULTS:" << std::endl;
                 for (const auto &result : results) 
@@ -250,8 +273,32 @@ public:
                     if (debug)
                         std::cout << "    " << result.toString() << std::endl;
                     sub.callback_func(result.toLuaType());
+                    
+                }
+                std::cout << "3 " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
+            }
+        }
+    }
+
+    void retract(std::string factQueryStr)
+    {
+        Fact factQuery{factQueryStr};
+        if (factQuery.fact_has_variables_or_wildcards())
+        {
+            std::vector<std::string> keysToDelete;
+            for (const auto& f : facts) {
+                auto [did_match, _] = fact_match(factQuery, f.second, QueryResult{});
+                if (did_match) {
+                    keysToDelete.push_back(f.first);
                 }
             }
+            for (const auto& factKey : keysToDelete) {
+                facts.erase(factKey);
+            }
+        }
+        else
+        {
+            facts.erase(factQuery.toString());
         }
     }
 
