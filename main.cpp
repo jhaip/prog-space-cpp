@@ -92,6 +92,7 @@ int main () {
         sol::load_result script10 = lua.load_file("10__outlinePrograms.lua");
         sol::load_result script11 = lua.load_file("11__counting.lua");
         sol::load_result script12 = lua.load_file("../../scripts/12__particle.lua"); 
+        sol::load_result script13 = lua.load_file("../../scripts/13__particleFast.lua"); 
         // std::vector<sol::load_result> scripts = {
         //     lua.load_file("foxisred.lua"),
         //     lua.load_file("isananimal.lua"),
@@ -124,26 +125,16 @@ int main () {
         sf::Time currentTime;
 
         script11();
-        script12();
+        // script12();
+        script13();
 
         int loopCount = 0;
+        window.setFramerateLimit(60);
         while (window.isOpen())
         {
-            sf::Event event;
-            while (window.pollEvent(event))
-            {
-                if (event.type == sf::Event::Closed) {
-                    window.close();
-                } else if (event.type == sf::Event::KeyPressed) {
-                    if (event.key.code == sf::Keyboard::Enter) {
-                        std::cout << "Enter pressed" << std::endl;
-                        db.print();
-                    }
-                }
-            }
-
-            currentTime = clock.getElapsedTime();
-            if (currentTime.asSeconds() - previousTime.asSeconds() > 1.0f/60.0f) {
+            // currentTime = clock.getElapsedTime();
+            // if (currentTime.asSeconds() - previousTime.asSeconds() > 1.0f/60.0f) {
+                currentTime = clock.getElapsedTime();
                 fps = 1.0f / (currentTime.asSeconds() - previousTime.asSeconds()); // the asSeconds returns a float
                 // std::cout << "fps =" << floor(fps) << std::endl; // flooring it will make the frame rate a rounded number
                 previousTime = currentTime;
@@ -183,6 +174,23 @@ int main () {
 
                 db.run_subscriptions();
 
+                sf::Event event;
+                while (window.pollEvent(event))
+                {
+                    if (event.type == sf::Event::Closed)
+                    {
+                        window.close();
+                    }
+                    else if (event.type == sf::Event::KeyPressed)
+                    {
+                        if (event.key.code == sf::Keyboard::Enter)
+                        {
+                            std::cout << "Enter pressed" << std::endl;
+                            db.print();
+                        }
+                    }
+                }
+
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
                     script4();
                 } else {
@@ -200,24 +208,24 @@ int main () {
                 for (const auto &wish : textGraphicsWishes) {
                     sf::Text text;
                     text.setFont(font);
-                    text.setString(wish.Result.at("text").value);
+                    text.setString(wish.get("text").value);
                     text.setFillColor(sf::Color::Red);
-                    text.setPosition(std::stod(wish.Result.at("x").value), std::stod(wish.Result.at("y").value));
+                    text.setPosition(std::stod(wish.get("x").value), std::stod(wish.get("y").value));
                     window.draw(text);
                 }
                 auto lineGraphicsWishes = db.select({"$ wish line from $x1 $y1 to $x2 $y2"});
                 for (const auto &wish : lineGraphicsWishes) {
                     sf::Vertex line[] =
                     {
-                        sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x1").value), std::stod(wish.Result.at("y1").value))),
-                        sf::Vertex(sf::Vector2f(std::stod(wish.Result.at("x2").value), std::stod(wish.Result.at("y2").value))),
+                        sf::Vertex(sf::Vector2f(std::stod(wish.get("x1").value), std::stod(wish.get("y1").value))),
+                        sf::Vertex(sf::Vector2f(std::stod(wish.get("x2").value), std::stod(wish.get("y2").value))),
                     };
                     window.draw(line, 2, sf::Lines);
                 }
                 auto frameGraphicsWishes = db.select({"$ wish frame at $x $y scale $s"});
                 for (const auto &wish : frameGraphicsWishes) {
-                    latestFrameSprite.setPosition(sf::Vector2f(std::stod(wish.Result.at("x").value), std::stod(wish.Result.at("y").value)));
-                    float s = std::stod(wish.Result.at("s").value);
+                    latestFrameSprite.setPosition(sf::Vector2f(std::stod(wish.get("x").value), std::stod(wish.get("y").value)));
+                    float s = std::stod(wish.get("s").value);
                     latestFrameSprite.setScale(s, s);
                     window.draw(latestFrameSprite);
                 }
@@ -231,7 +239,7 @@ int main () {
 
 
                 window.display();
-            }
+            // }
         }
 
         stop_cv_thread = true;

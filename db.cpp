@@ -56,7 +56,8 @@ std::string terms_to_string(std::vector<Term> terms) {
 }
 
 struct QueryResult {
-    std::map<std::string, Term> Result;
+    // std::unordered_map<std::string, Term> Result;
+    std::vector<std::pair<std::string, Term>> Result;
 
     bool operator==(const QueryResult &other) const
     {
@@ -78,6 +79,26 @@ struct QueryResult {
             lua_result.emplace(n.first, n.second.toString());
         }
         return lua_result;
+    }
+
+    std::optional<Term> find(const std::string key) const {
+        for (const auto &n : Result)
+        {
+            if (n.first == key) {
+                return n.second;
+            }
+        }
+        return {};
+    }
+
+    Term get(const std::string key) const {
+        return find(key).value();
+    }
+
+    void add(const std::string variable_name, const Term &term)
+    {
+        // Result.emplace(variable_name, term);
+        Result.push_back({variable_name, term});
     }
 };
 
@@ -112,86 +133,50 @@ public:
     }
 };
 
-std::tuple<bool, QueryResult> term_match(const Term &A, const Term &B, const QueryResult &env) {
+bool term_match(const Term &A, const Term &B, QueryResult &env) {
     if (A.type == "variable" || A.type == "postfix") {
         auto variable_name = A.value;
         // "Wilcard" matches all but doesn't have a result
         if (variable_name == "") {
-            return {true, env};
+            return true;
         }
-        if (env.Result.find(variable_name) != env.Result.end()) {
-            return term_match(env.Result.at(variable_name), B, env);
+        if (auto match = env.find(variable_name)) {
+            return term_match(match.value(), B, env);
         } else {
-            QueryResult new_env{};
-            for (const auto& n : env.Result) {
-                new_env.Result.emplace(n.first, n.second);
-            }
-            new_env.Result.emplace(variable_name, B);
-            return {true, new_env};
+            env.add(variable_name, B);
+            return true;
         }
     } else if (A.type == B.type && A.value == B.value) {
-        return {true, env};
+        return true;
     }
-    return {false, QueryResult{}};
+    return false;
 }
 
-std::tuple<bool, QueryResult> fact_match(const Fact &A, const Fact &B, const QueryResult &env) {
+bool fact_match(const Fact &A, const Fact &B, QueryResult &env) {
     if (A.terms.at(A.terms.size()-1).type == "postfix") {
         if (A.terms.size() > B.terms.size()) {
-            return {false, QueryResult{}};
+            return false;
         }
     } else if (A.terms.size() != B.terms.size()) {
-        return {false, QueryResult{}};
-    }
-    QueryResult new_env{};
-    for (const auto& n : env.Result) {
-        new_env.Result.emplace(n.first, n.second);
+        return false;
     }
     int i = 0;
     for (auto &A_term: A.terms) {
-        auto [did_match, tmp_new_env] = term_match(A_term, B.terms[i], new_env);
+        auto did_match = term_match(A_term, B.terms[i], env);
         if (did_match == false) {
-            return {false, QueryResult{}};
+            return false;
         }
-        new_env = tmp_new_env;
         if (A_term.type == "postfix") {
             auto postfix_variable_name = A_term.value;
             if (postfix_variable_name != "") {
                 std::vector<Term> sliced_terms = std::vector<Term>(B.terms.begin() + i, B.terms.end()); // B.terms[i:]
-                new_env.Result.emplace(postfix_variable_name, Term{"text", terms_to_string(sliced_terms)});
+                env.add(postfix_variable_name, Term{"text", terms_to_string(sliced_terms)});
             }
             break;
         }
         i++;
     }
-    return {true, new_env};
-}
-
-std::vector<QueryResult> collect_solutions(const std::map<std::string, Fact> &facts, const std::vector<Fact> &query, const QueryResult &env) {
-    auto start = high_resolution_clock::now();
-    // std::cout << "collect solutions" << std::endl;
-    if (query.size() == 0) {
-        return {env};
-    }
-    std::vector<QueryResult> solutions{};
-    std::vector<std::string> keys;
-    for (const auto& n : facts) {
-        keys.push_back(n.first);
-    }
-    std::sort(keys.begin(), keys.end());
-    // std::cout << "done sorting " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
-    for (const auto& k : keys) {
-        auto [did_match, new_env] = fact_match(query[0], facts.at(k), env);
-        if (did_match) {
-            std::vector<Fact> sliced_query = std::vector<Fact>(query.begin() + 1, query.end()); // query[1:]
-            auto collected_solutions = collect_solutions(facts, sliced_query, new_env);
-            for (const auto& solution : collected_solutions) {
-                solutions.push_back(solution);
-            }
-        }
-    }
-    // std::cout << "done looking for matches " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
-    return solutions;
+    return true;
 }
 
 class Subscription
@@ -230,16 +215,38 @@ public:
         facts.emplace(fact_string, Fact{fact_string});
     }
 
+    std::vector<QueryResult> collect_solutions(const std::vector<Fact> &query, const QueryResult &env)
+    {
+        // std::cout << "collect solutions" << std::endl;
+        if (query.size() == 0)
+        {
+            return {env};
+        }
+        std::vector<QueryResult> solutions{};
+        for (auto const &pair : facts)
+        {
+            QueryResult new_env{env};
+            auto did_match = fact_match(query[0], pair.second, new_env);
+            if (did_match)
+            {
+                std::vector<Fact> sliced_query = std::vector<Fact>(query.begin() + 1, query.end()); // query[1:]
+                auto collected_solutions = collect_solutions(sliced_query, new_env);
+                for (const auto &solution : collected_solutions)
+                {
+                    solutions.push_back(solution);
+                }
+            }
+        }
+        return solutions;
+    }
+
     std::vector<QueryResult> select(std::vector<std::string> query_parts) {
-        auto start = high_resolution_clock::now();
         std::vector<Fact> query;
         for (const auto &query_str : query_parts) {
             if (debug) std::cout << query_str << std::endl;
             query.push_back(Fact{query_str});
         }
-        std::cout << "make query: " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
-        auto r = collect_solutions(facts, query, QueryResult{});
-        std::cout << "get solutions: " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
+        auto r = collect_solutions(query, QueryResult{});
         return r;
     }
 
@@ -258,14 +265,11 @@ public:
     }
 
     void run_subscriptions() {
-        auto start = high_resolution_clock::now();
         for (auto &sub : subscriptions) {
             auto results = select(sub.query_parts);
-            std::cout << "1 " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
             if (sub.last_results != results) {
                 // std::cout << "RESULTS are different!:" << std::endl;
                 sub.last_results = results;
-                std::cout << "2 " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
                 if (debug)
                     std::cout << "RESULTS:" << std::endl;
                 for (const auto &result : results) 
@@ -275,7 +279,6 @@ public:
                     sub.callback_func(result.toLuaType());
                     
                 }
-                std::cout << "3 " << (duration_cast<microseconds>(high_resolution_clock::now() - start)).count() << std::endl;
             }
         }
     }
@@ -287,7 +290,8 @@ public:
         {
             std::vector<std::string> keysToDelete;
             for (const auto& f : facts) {
-                auto [did_match, _] = fact_match(factQuery, f.second, QueryResult{});
+                QueryResult qr;
+                auto did_match = fact_match(factQuery, f.second, qr);
                 if (did_match) {
                     keysToDelete.push_back(f.first);
                 }
