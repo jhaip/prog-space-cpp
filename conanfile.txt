@@ -3,6 +3,8 @@ zlib/1.2.12
 sol2/3.2.3
 sfml/2.5.1
 opencv/4.5.1
+cpp-httplib/0.10.6
+nlohmann_json/3.10.5
 
 [options]
 sfml:window=True
@@ -11,6 +13,9 @@ sfml:shared=True
 opencv:with_tiff=False
 opencv:with_webp=False
 opencv:contrib=True
+cpp-httplib:with_openssl=True
+cpp-httplib:with_zlib=True
+cpp-httplib:with_brotli=True
 
 [generators]
 cmake

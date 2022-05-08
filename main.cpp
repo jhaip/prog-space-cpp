@@ -8,8 +8,12 @@
 #include <iostream>
 #include <map>
 #include <thread>
+#include <nlohmann/json.hpp>
 
 #include "db.cpp"
+#include "http.cpp"
+
+using nlohmann::json;
 
 using namespace std::chrono;
 using namespace cv;
@@ -22,9 +26,74 @@ std::vector<std::vector<cv::Point2f>> seen_program_corners;
 cv::Mat latestFrame;
 
 std::string my_function( int a, std::string b ) {
-        // Create a string with the letter 'D' "a" times,
-        // append it to 'b'
-        return b + std::string( 'D', a );
+    // Create a string with the letter 'D' "a" times,
+    // append it to 'b'
+    return b + std::string( 'D', a ); 
+}
+
+// from https://github.com/ThePhD/sol2/issues/86
+sol::object jsonToLuaObject(const json &j, sol::state_view &lua)
+{
+    std::cout << "calling" << std::endl;
+    if (j.is_null())
+    {
+        return sol::make_object(lua, sol::nil);
+    }
+    else if (j.is_boolean())
+    {
+        std::cout << "bool" << std::endl;
+        return sol::make_object(lua, j.get<bool>());
+    }
+    else if (j.is_number())
+    {
+        std::cout << "number" << j.get<double>() << std::endl;
+        return sol::make_object(lua, j.get<double>());
+    }
+    else if (j.is_string())
+    {
+        std::cout << "string" << std::endl;
+        return sol::make_object(lua, j.get<std::string>().c_str());
+    }
+    else if (j.is_object())
+    {
+        std::cout << "object" << std::endl;
+        sol::table obj = lua.create_table();
+        for (auto &el : j.items())
+        {
+            std::cout << el.key() << el.value() << std::endl;
+            auto thing = jsonToLuaObject(el.value(), lua);
+            std::cout << "got value" << std::endl;
+            obj.set(el.key(), thing);
+            std::cout << "set value" << std::endl;
+        }
+        return obj.as<sol::object>();
+    }
+    else if (j.is_array())
+    {
+        std::cout << "array" << std::endl;
+        sol::table obj = lua.create_table();
+        unsigned long i = 0;
+        for (auto &el : j.items())
+        {
+            obj.set(i++, jsonToLuaObject(el.value(), lua));
+        }
+        return obj;
+    }
+    std::cout << "fallback" << std::endl;
+    return sol::make_object(lua, sol::nil);
+}
+
+void http_request(std::vector<std::string> query_parts, sol::protected_function callback_func, sol::this_state ts)
+{
+    std::cout << "making http request" << std::endl;
+    if (auto response_json = do_http_request()) {
+        sol::state_view lua = ts;
+        auto r = jsonToLuaObject(response_json.value(), lua);
+        // std::cout << r.as<std::string>() << std::endl;
+        callback_func(r);
+        // todo: support other response types
+    }
+    std::cout << "making http request == done" << std::endl;
 }
 
 void my_query(std::string a, sol::protected_function f) {
@@ -80,6 +149,7 @@ int main () {
         lua.set_function("cleanup", &Database::cleanup, &db);
         lua.set_function("retract", &Database::retract, &db);
         lua.set_function("register_when", &Database::register_when, &db);
+        lua.set_function("http_request", http_request);
         
 
         sol::load_result script1 = lua.load_file("foxisred.lua");
@@ -88,6 +158,7 @@ int main () {
         sol::load_result script4 = lua.load_file("whentime.lua");
         sol::load_result script5 = lua.load_file("isananimal.lua");
         sol::load_result script6 = lua.load_file("timeis.lua");
+        sol::load_result script7 = lua.load_file("../../scripts/7__darksky.lua");
         sol::load_result script9 = lua.load_file("9__animation.lua");
         sol::load_result script10 = lua.load_file("10__outlinePrograms.lua");
         sol::load_result script11 = lua.load_file("11__counting.lua");
@@ -127,6 +198,8 @@ int main () {
         script11();
         // script12();
         script13();
+
+        script7();
 
         int loopCount = 0;
         window.setFramerateLimit(60);
@@ -168,7 +241,7 @@ int main () {
                 script3();
                 // script4();
                 script5();
-                // script6();
+                // script6(); // also mapped to aruco card
                 script9();
                 script10();
 

@@ -4,7 +4,7 @@ Experimental c++ and lua version of a programmable-space
 ```
 $ mkdir build && cd build
 
-$ conan install ..
+$ conan install .. --build=missing
 
 (win)
 $ cmake .. -G "Visual Studio 16"
