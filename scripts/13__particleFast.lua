@@ -8,7 +8,7 @@ claim("#13 particles "..p)
 
 register_when("13", {"$ particles $p", "$ clock time is $t"}, function (result)
     retract("#13 particles $")
-    retract("#13 wish text % at %")
+    retract("#13 wish text $ at %")
     new_particles = ""
     i = 0;
     for particle_str in string.gmatch(result["p"], '([^,]+)') do
