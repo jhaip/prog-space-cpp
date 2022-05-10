@@ -1,6 +1,8 @@
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
 #include <SFML/Graphics.hpp>
+#include "SelbaWard/ElasticSprite.cpp"
+// #include "SelbaWard/Sprite3d.cpp"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/aruco.hpp>
@@ -305,6 +307,29 @@ int main () {
                     float s = std::stod(wish.get("s").value);
                     latestFrameSprite.setScale(s, s);
                     window.draw(latestFrameSprite);
+
+                    // sf::VertexArray quad(sf::Quads, 4);
+
+                    // // define it as a rectangle, located at (10, 10) and with size 100x100
+                    // quad[0].position = sf::Vector2f(20.f, 0.f);
+                    // quad[1].position = sf::Vector2f(80.f, 0.f);
+                    // quad[2].position = sf::Vector2f(120.f, 100.f);
+                    // quad[3].position = sf::Vector2f(-20.f, 100.f);
+
+                    // // define its texture area to be a 25x50 rectangle starting at (0, 0)
+                    // quad[0].texCoords = sf::Vector2f(0.f, 0.f);
+                    // quad[1].texCoords = sf::Vector2f(1280.f, 0.f);
+                    // quad[2].texCoords = sf::Vector2f(1280.f, 720.f);
+                    // quad[3].texCoords = sf::Vector2f(0.f, 720.f);
+                    // window.draw(quad, &latestFrameTexture);
+
+                    sw::ElasticSprite sprite{latestFrameTexture};
+                    // sprite.setScale(100.f/1280.f, 100.f/720.f);
+                    sprite.setVertexOffset(0, {100.0f, 0.f}); // TL
+                    sprite.setVertexOffset(1, {0.0f, -720.f+300.f}); // BL
+                    sprite.setVertexOffset(2, {-1280.f+400.0f, -720.f+300.f}); // BR
+                    sprite.setVertexOffset(3, {-1280.f + 300.0f, 0.f}); // TR
+                    window.draw(sprite);
                 }
 
                 sf::Text fpsText;
