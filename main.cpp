@@ -26,6 +26,7 @@ std::atomic_bool new_data_available{false};
 std::vector<int> seen_program_ids;
 std::vector<std::vector<cv::Point2f>> seen_program_corners;
 cv::Mat latestFrame;
+cv::Mat calibrationMatrix;
 
 std::string my_function( int a, std::string b ) {
     // Create a string with the letter 'D' "a" times,
@@ -181,7 +182,11 @@ int main () {
         std::vector<std::pair<float, float>> calibration = {{10, 10}, {1200, 10}, {1200, 700}, {10, 700}};
         int calibrationCorner = 0;
 
-        sf::RenderWindow window(sf::VideoMode(800, 800), "SFML works!");
+        int SCREEN_WIDTH = 800;
+        int SCREEN_HEIGHT = 800;
+        int CAMERA_WIDTH = 1280;
+        int CAMERA_HEIGHT = 720;
+        sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "SFML works!");
         sf::RenderWindow debugWindow(sf::VideoMode(1280, 720), "debug");
         sf::Font font;
         // TODO: find font into project and load that
@@ -288,26 +293,66 @@ int main () {
                 } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
                     calibrationCorner = 3;
                 }
+                bool shouldRecalculate = false;
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
                 {
                     calibration[calibrationCorner].first++;
+                    shouldRecalculate = true;
                 }
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
                 {
                     calibration[calibrationCorner].first--;
+                    shouldRecalculate = true;
                 }
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
                 {
                     calibration[calibrationCorner].second--;
+                    shouldRecalculate = true;
                 }
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
                 {
                     calibration[calibrationCorner].second++;
+                    shouldRecalculate = true;
+                }
+                if (shouldRecalculate) {
+                    std::vector<cv::Point2f> screen_vertices{
+                        cv::Point2f{0, (float)SCREEN_HEIGHT}, // bottomLeft
+                        cv::Point2f{0, 0}, // topLeft
+                        cv::Point2f{(float)SCREEN_WIDTH, 0},      // Top Right
+                        cv::Point2f{(float)SCREEN_WIDTH, (float)SCREEN_HEIGHT} // bottomRight
+                    };
+
+                    std::vector<cv::Point2f> camera_vertices{
+                        cv::Point2f{0, (float)CAMERA_HEIGHT},                  // bottomLeft
+                        cv::Point2f{0, 0},                                     // topLeft
+                        cv::Point2f{(float)CAMERA_WIDTH, 0},                   // Top Right
+                        cv::Point2f{(float)CAMERA_WIDTH, (float)CAMERA_HEIGHT} // bottomRight
+                    };
+
+                    std::vector<cv::Point2f> dst_vertices{
+                        cv::Point2f{calibration[3].first, calibration[3].second},
+                        cv::Point2f{calibration[0].first, calibration[0].second},
+                        cv::Point2f{calibration[1].first, calibration[1].second},
+                        cv::Point2f{calibration[2].first, calibration[2].second}
+                    };
+
+                    calibrationMatrix = getPerspectiveTransform(camera_vertices, dst_vertices);
+
+                    std::vector<cv::Point2f> world_corners;
+                    perspectiveTransform(screen_vertices, world_corners, calibrationMatrix.inv());
+
+                    std::cout << world_corners[0] << std::endl;
+                    std::cout << world_corners[1] << std::endl;
+                    std::cout << world_corners[2] << std::endl;
+                    std::cout << world_corners[3] << std::endl;
                 }
 
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num9)) {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num9))
+                {
                     script4();
-                } else {
+                }
+                else
+                {
                     db.cleanup("5");
                 }
                 if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), 49) != main_seen_program_ids.end()) {
