@@ -173,24 +173,35 @@ int main () {
         //     script();
         // }
 
+        int SCREEN_WIDTH = 1280;
+        int SCREEN_HEIGHT = 720;
+        int CAMERA_WIDTH = 1280;
+        int CAMERA_HEIGHT = 720;
+
         std::vector<int> main_seen_program_ids;
         std::vector<std::vector<cv::Point2f>> main_seen_program_corners;
         cv::Mat main_latestFrame;
         sf::Image latestFrameImage;
         sf::Texture latestFrameTexture;
         sf::Sprite latestFrameSprite;
-        std::vector<std::pair<float, float>> calibration = {{10, 10}, {1200, 10}, {1200, 700}, {10, 700}};
+        std::vector<std::pair<float, float>> calibration = {{10, 10}, {1200, 10}, {1200, 700}, {10, 700}}; // TL TR BR BL
         int calibrationCorner = 0;
+        std::vector<cv::Point2f> projection_corrected_world_corners = {
+            cv::Point2f(0, SCREEN_HEIGHT),
+            cv::Point2f(0, 0),
+            cv::Point2f(SCREEN_WIDTH, 0),
+            cv::Point2f(SCREEN_WIDTH, SCREEN_HEIGHT)}; // BL TL TR BR
 
-        int SCREEN_WIDTH = 800;
-        int SCREEN_HEIGHT = 800;
-        int CAMERA_WIDTH = 1280;
-        int CAMERA_HEIGHT = 720;
         sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "SFML works!");
-        sf::RenderWindow debugWindow(sf::VideoMode(1280, 720), "debug");
+        sf::RenderWindow debugWindow(sf::VideoMode(CAMERA_WIDTH, CAMERA_HEIGHT), "debug");
         sf::Font font;
         // TODO: find font into project and load that
         if (!font.loadFromFile("/System/Library/Fonts/Supplemental/Arial.ttf")) {
+            // error...
+        }
+        sf::RenderTexture renderTexture;
+        if (!renderTexture.create(SCREEN_WIDTH, SCREEN_HEIGHT))
+        {
             // error...
         }
 
@@ -236,8 +247,15 @@ int main () {
                 db.claim("#0 clock time is " + std::to_string(loopCount));
                 int index = 0;
                 for (auto& id : main_seen_program_ids) {
-                    cv::Point2f corner = main_seen_program_corners.at(index).at(0);
-                    db.claim("#0 program "+std::to_string(id)+" at "+std::to_string(corner.x)+" "+std::to_string(corner.y));
+                    cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
+                    cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
+                    cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
+                    cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
+                    db.claim("#0 program " + std::to_string(id) + " at " +
+                             std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
+                             std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
+                             std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
+                             std::to_string(corner3.x) + " " + std::to_string(corner3.y));
                     index += 1;
                 }
                 loopCount += 1;
@@ -338,13 +356,12 @@ int main () {
 
                     calibrationMatrix = getPerspectiveTransform(camera_vertices, dst_vertices);
 
-                    std::vector<cv::Point2f> world_corners;
-                    perspectiveTransform(screen_vertices, world_corners, calibrationMatrix.inv());
+                    perspectiveTransform(screen_vertices, projection_corrected_world_corners, calibrationMatrix.inv());
 
-                    std::cout << world_corners[0] << std::endl;
-                    std::cout << world_corners[1] << std::endl;
-                    std::cout << world_corners[2] << std::endl;
-                    std::cout << world_corners[3] << std::endl;
+                    std::cout << projection_corrected_world_corners[0] << std::endl;
+                    std::cout << projection_corrected_world_corners[1] << std::endl;
+                    std::cout << projection_corrected_world_corners[2] << std::endl;
+                    std::cout << projection_corrected_world_corners[3] << std::endl;
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num9))
@@ -371,6 +388,7 @@ int main () {
                 // }
 
                 window.clear();
+                renderTexture.clear();
 
                 auto textGraphicsWishes = db.select({"$ wish text $text at $x $y"});
                 for (const auto &wish : textGraphicsWishes) {
@@ -388,7 +406,8 @@ int main () {
                         sf::Vertex(sf::Vector2f(std::stod(wish.get("x1").value), std::stod(wish.get("y1").value))),
                         sf::Vertex(sf::Vector2f(std::stod(wish.get("x2").value), std::stod(wish.get("y2").value))),
                     };
-                    window.draw(line, 2, sf::Lines);
+                    // window.draw(line, 2, sf::Lines);
+                    renderTexture.draw(line, 2, sf::Lines);
                 }
                 auto frameGraphicsWishes = db.select({"$ wish frame at $x $y scale $s"});
                 for (const auto &wish : frameGraphicsWishes) {
@@ -412,14 +431,23 @@ int main () {
                     // quad[3].texCoords = sf::Vector2f(0.f, 720.f);
                     // window.draw(quad, &latestFrameTexture);
 
-                    sw::ElasticSprite sprite{latestFrameTexture};
-                    // sprite.setScale(100.f/1280.f, 100.f/720.f);
-                    sprite.setVertexOffset(0, {100.0f, 0.f}); // TL
-                    sprite.setVertexOffset(1, {0.0f, -720.f+300.f}); // BL
-                    sprite.setVertexOffset(2, {-1280.f+400.0f, -720.f+300.f}); // BR
-                    sprite.setVertexOffset(3, {-1280.f + 300.0f, 0.f}); // TR
-                    window.draw(sprite);
+                    // sw::ElasticSprite sprite{latestFrameTexture};
+                    // // sprite.setScale(100.f/1280.f, 100.f/720.f);
+                    // sprite.setVertexOffset(0, {100.0f, 0.f}); // TL
+                    // sprite.setVertexOffset(1, {0.0f, -720.f+300.f}); // BL
+                    // sprite.setVertexOffset(2, {-1280.f+400.0f, -720.f+300.f}); // BR
+                    // sprite.setVertexOffset(3, {-1280.f + 300.0f, 0.f}); // TR
+                    // window.draw(sprite);
                 }
+
+                renderTexture.display();
+                const sf::Texture &renderTextureCopy = renderTexture.getTexture();
+                sw::ElasticSprite sprite{renderTextureCopy};
+                sprite.setVertexOffset(0, {projection_corrected_world_corners[1].x, projection_corrected_world_corners[1].y});                                // TL
+                sprite.setVertexOffset(1, {projection_corrected_world_corners[0].x, projection_corrected_world_corners[0].y - SCREEN_HEIGHT});                // BL
+                sprite.setVertexOffset(2, {projection_corrected_world_corners[3].x - SCREEN_WIDTH, projection_corrected_world_corners[3].y - SCREEN_HEIGHT}); // BR
+                sprite.setVertexOffset(3, {projection_corrected_world_corners[2].x - SCREEN_WIDTH, projection_corrected_world_corners[2].y});                 // TR
+                window.draw(sprite);
 
                 sf::Text fpsText;
                 fpsText.setFont(font);

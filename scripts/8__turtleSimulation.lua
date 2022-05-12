@@ -1,5 +1,5 @@
 cleanup("8")
-when({"$ program $program at $x $y", "$program is a $type card"}, function (results)
+when({"$ program $program at $x $y $ $ $ $ $ $", "$program is a $type card"}, function (results)
     -- calculate stack based on X/y order of cards
     claim("#8 state is "..{"turtle", "spiral", "emitter"})
 end)
