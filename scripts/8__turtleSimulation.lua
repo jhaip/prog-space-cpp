@@ -1,15 +1,24 @@
 cleanup("8")
-when({"$ program $program at $x $y $ $ $ $ $ $", "$program is a $type card"}, function (results)
+register_when("8", {"$ program $program at $x $y $ $ $ $ $ $", "$program is a $type card"}, function (results)
     -- calculate stack based on X/y order of cards
-    claim("#8 state is "..{"turtle", "spiral", "emitter"})
+    retract("#8 state is %")
+    for index, result in ipairs(results) do
+        claim("#8 state is "..{"turtle", "spiral", "emitter"})
+    end
 end)
 
-when({"(you) state is $state", "$ time is $timeMs"}, function (result)
+register_when("8", {"(you) state is $state", "$ time is $timeMs"}, function (results)
     -- todo
-    claim("#8 turtle ".."1".." at "..x.." "..y)
+    retract("#8 turtle %")
+    for index, result in ipairs(results) do
+        claim("#8 turtle ".."1".." at "..x.." "..y)
+    end
 end)
 
-when({"(you) turtle $id at $x $y"}, function (result)
+register_when("8", {"(you) turtle $id at $x $y"}, function (results)
     -- todo
-    claim("#8 draw graphics "..graphics)
+    retract("#8 draw %")
+    for index, result in ipairs(results) do
+        claim("#8 draw graphics "..graphics)
+    end
 end)

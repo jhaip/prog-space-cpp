@@ -272,13 +272,14 @@ public:
                 sub.last_results = results;
                 if (debug)
                     std::cout << "RESULTS:" << std::endl;
+                std::vector<std::map<std::string, std::string>> luaResults;
                 for (const auto &result : results) 
                 {
                     if (debug)
                         std::cout << "    " << result.toString() << std::endl;
-                    sub.callback_func(result.toLuaType());
-                    
+                    luaResults.emplace_back(result.toLuaType());
                 }
+                sub.callback_func(luaResults);
             }
         }
     }

@@ -149,30 +149,22 @@ int main () {
         lua.set_function("remove_subs", &Database::remove_subs, &db);
         lua.set_function("http_request", http_request);
 
-        sol::load_result script1 = lua.load_file("../../scripts/foxisred.lua");
-        sol::load_result script2 = lua.load_file("../../scripts/youisafox.lua");
-        sol::load_result script3 = lua.load_file("../../scripts/whensomeoneisafox.lua");
-        sol::load_result script4 = lua.load_file("../../scripts/whentime.lua");
-        sol::load_result script5 = lua.load_file("../../scripts/isananimal.lua");
-        sol::load_result script6 = lua.load_file("../../scripts/timeis.lua");
-        sol::load_result script7 = lua.load_file("../../scripts/7__darksky.lua");
-        sol::load_result script9 = lua.load_file("../../scripts/9__animation.lua");
-        sol::load_result script10 = lua.load_file("../../scripts/10__outlinePrograms.lua");
-        sol::load_result script11 = lua.load_file("../../scripts/11__counting.lua");
-        sol::load_result script12 = lua.load_file("../../scripts/12__particle.lua"); 
-        sol::load_result script13 = lua.load_file("../../scripts/13__particleFast.lua");
-        sol::load_result script14 = lua.load_file("../../scripts/14__showWeather.lua");
-        // std::vector<sol::load_result> scripts = {
-        //     lua.load_file("foxisred.lua"),
-        //     lua.load_file("isananimal.lua"),
-        //     lua.load_file("whensomeoneisafox.lua"),
-        //     lua.load_file("whentime.lua"),
-        //     lua.load_file("youisafox.lua"),
-        // };
-
-        // for (auto& script : scripts) {
-        //     script();
-        // }
+        std::vector<std::string> scriptPaths = {
+            "", // 0
+            "../../scripts/1__foxisred.lua",
+            "../../scripts/2__isananimal.lua",
+            "../../scripts/3__timeis.lua",
+            "../../scripts/4__whensomeoneisafox.lua",
+            "../../scripts/5__whentime.lua",
+            "../../scripts/6__youisafox.lua",
+            "../../scripts/7__darksky.lua",
+            "", // 8
+            "../../scripts/9__animation.lua",
+            "../../scripts/10__outlinePrograms.lua",
+            "../../scripts/11__counting.lua",
+            "../../scripts/12__particle.lua",
+            "../../scripts/13__particleFast.lua",
+            "../../scripts/14__showWeather.lua"};
 
         int SCREEN_WIDTH = 1920;
         int SCREEN_HEIGHT = 1080;
@@ -213,13 +205,6 @@ int main () {
         sf::Time previousTime = clock.getElapsedTime();
         sf::Time currentTime;
 
-        script11();
-        // script12();
-        script13();
-
-        script7();
-        script14();
-
         int loopCount = 0;
         window.setFramerateLimit(60);
         while (window.isOpen() && debugWindow.isOpen())
@@ -231,10 +216,25 @@ int main () {
                 // std::cout << "fps =" << floor(fps) << std::endl; // flooring it will make the frame rate a rounded number
                 previousTime = currentTime;
 
+                std::vector<int> newlySeenPrograms;
+                std::vector<int> programsThatDied;
                 {
                     std::lock_guard<std::mutex> guard(myMutex);
                     if (new_data_available) {
                         new_data_available = false;
+                        for (auto &id : seen_program_ids)
+                        {
+                            if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), id) == main_seen_program_ids.end()) {
+                                newlySeenPrograms.emplace_back(id);
+                            }
+                        }
+                        for (auto &id : main_seen_program_ids)
+                        {
+                            if (std::find(seen_program_ids.begin(), seen_program_ids.end(), id) == seen_program_ids.end())
+                            {
+                                programsThatDied.emplace_back(id);
+                            }
+                        }
                         main_seen_program_ids = seen_program_ids;
                         main_seen_program_corners = seen_program_corners;
                         cv::cvtColor(latestFrame, main_latestFrame, cv::COLOR_BGR2RGBA);
@@ -262,14 +262,18 @@ int main () {
                     index += 1;
                 }
                 loopCount += 1;
-                script1();
-                script2();
-                script3();
-                // script4();
-                script5();
-                // script6(); // also mapped to aruco card
-                script9();
-                script10();
+
+                for (auto &id : programsThatDied)
+                {
+                    std::cout << id << " died." << std::endl;
+                    db.cleanup(std::to_string(id));
+                    db.remove_subs(std::to_string(id));
+                }
+                for (auto &id : newlySeenPrograms)
+                {
+                    std::cout << "running " << id << std::endl;
+                    lua.script_file(scriptPaths[id]);
+                }
 
                 db.run_subscriptions();
 
@@ -376,29 +380,6 @@ int main () {
 
                     shouldRecalculate = false;
                 }
-
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num9))
-                {
-                    script4();
-                }
-                else
-                {
-                    db.cleanup("5");
-                }
-                if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), 49) != main_seen_program_ids.end()) {
-                    script6();
-                } else {
-                    db.cleanup("3");
-                }
-                // TODO: need to update CV to only run programs when program first seen
-                // if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), 44) != main_seen_program_ids.end())
-                // {
-                //     script14();
-                // }
-                // else
-                // {
-                //     db.cleanup("14");
-                // }
 
                 window.clear(sf::Color(0,0,255, 255));
                 renderTexture.clear();
