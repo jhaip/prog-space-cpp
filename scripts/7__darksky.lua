@@ -2,7 +2,7 @@ cleanup("7")
 remove_subs("7")
 print("hello")
 register_when("7", {"$ time is $time"}, function (result)
-    print("running")
+    -- print("running")
     if tonumber(result["time"]) % 10 == 0 then
         print("making http request")
         darkSkyUrl = "https://api.darksky.net/forecast/ff4210a6ee0e933946c817939138eb1f/42.3601,-71.0589?exclude=minutely,hourly,alerts,flags"

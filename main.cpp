@@ -109,6 +109,7 @@ void cvLoop() {
         cv::Mat image, imageCopy;
         inputVideo.retrieve(image);
         image.copyTo(imageCopy);
+        // std::cout << "width: " << imageCopy.cols << " height: " << imageCopy.rows << std::endl;
         std::vector<int> ids;
         std::vector<std::vector<cv::Point2f>> corners;
         cv::aruco::detectMarkers(image, dictionary, corners, ids);
@@ -173,10 +174,10 @@ int main () {
         //     script();
         // }
 
-        int SCREEN_WIDTH = 1280;
-        int SCREEN_HEIGHT = 720;
-        int CAMERA_WIDTH = 1280;
-        int CAMERA_HEIGHT = 720;
+        int SCREEN_WIDTH = 1920;
+        int SCREEN_HEIGHT = 1080;
+        int CAMERA_WIDTH = 1920;
+        int CAMERA_HEIGHT = 1080;
 
         std::vector<int> main_seen_program_ids;
         std::vector<std::vector<cv::Point2f>> main_seen_program_corners;
@@ -184,13 +185,15 @@ int main () {
         sf::Image latestFrameImage;
         sf::Texture latestFrameTexture;
         sf::Sprite latestFrameSprite;
-        std::vector<std::pair<float, float>> calibration = {{10, 10}, {1200, 10}, {1200, 700}, {10, 700}}; // TL TR BR BL
+        std::vector<std::pair<float, float>> calibration = {{226, 124}, {1442, 108}, {1458, 830}, {198, 810}}; // TL TR BR BL
         int calibrationCorner = 0;
         std::vector<cv::Point2f> projection_corrected_world_corners = {
-            cv::Point2f(0, SCREEN_HEIGHT),
             cv::Point2f(0, 0),
             cv::Point2f(SCREEN_WIDTH, 0),
-            cv::Point2f(SCREEN_WIDTH, SCREEN_HEIGHT)}; // BL TL TR BR
+            cv::Point2f(SCREEN_WIDTH, SCREEN_HEIGHT),
+            cv::Point2f(0, SCREEN_HEIGHT)
+        }; // TL TR BR BL
+        bool shouldRecalculate = true;
 
         sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "SFML works!");
         sf::RenderWindow debugWindow(sf::VideoMode(CAMERA_WIDTH, CAMERA_HEIGHT), "debug");
@@ -311,57 +314,67 @@ int main () {
                 } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
                     calibrationCorner = 3;
                 }
-                bool shouldRecalculate = false;
+                
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
                 {
-                    calibration[calibrationCorner].first++;
+                    calibration[calibrationCorner].first+=2;
                     shouldRecalculate = true;
                 }
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
                 {
-                    calibration[calibrationCorner].first--;
+                    calibration[calibrationCorner].first-=2;
                     shouldRecalculate = true;
                 }
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
                 {
-                    calibration[calibrationCorner].second--;
+                    calibration[calibrationCorner].second-=2;
                     shouldRecalculate = true;
                 }
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
                 {
-                    calibration[calibrationCorner].second++;
+                    calibration[calibrationCorner].second+=2;
                     shouldRecalculate = true;
                 }
                 if (shouldRecalculate) {
                     std::vector<cv::Point2f> screen_vertices{
-                        cv::Point2f{0, (float)SCREEN_HEIGHT}, // bottomLeft
-                        cv::Point2f{0, 0}, // topLeft
-                        cv::Point2f{(float)SCREEN_WIDTH, 0},      // Top Right
-                        cv::Point2f{(float)SCREEN_WIDTH, (float)SCREEN_HEIGHT} // bottomRight
+                        cv::Point2f{0, 0},                                     // topLeft
+                        cv::Point2f{(float)SCREEN_WIDTH, 0},                   // Top Right
+                        cv::Point2f{(float)SCREEN_WIDTH, (float)SCREEN_HEIGHT}, // bottomRight
+                        cv::Point2f{0, (float)SCREEN_HEIGHT}                  // bottomLeft
                     };
 
                     std::vector<cv::Point2f> camera_vertices{
-                        cv::Point2f{0, (float)CAMERA_HEIGHT},                  // bottomLeft
                         cv::Point2f{0, 0},                                     // topLeft
                         cv::Point2f{(float)CAMERA_WIDTH, 0},                   // Top Right
-                        cv::Point2f{(float)CAMERA_WIDTH, (float)CAMERA_HEIGHT} // bottomRight
+                        cv::Point2f{(float)CAMERA_WIDTH, (float)CAMERA_HEIGHT}, // bottomRight
+                        cv::Point2f{0, (float)CAMERA_HEIGHT}                  // bottomLeft
                     };
 
                     std::vector<cv::Point2f> dst_vertices{
-                        cv::Point2f{calibration[3].first, calibration[3].second},
                         cv::Point2f{calibration[0].first, calibration[0].second},
                         cv::Point2f{calibration[1].first, calibration[1].second},
-                        cv::Point2f{calibration[2].first, calibration[2].second}
+                        cv::Point2f{calibration[2].first, calibration[2].second},
+                        cv::Point2f{calibration[3].first, calibration[3].second}
                     };
 
-                    calibrationMatrix = getPerspectiveTransform(camera_vertices, dst_vertices);
+                    calibrationMatrix = getPerspectiveTransform(dst_vertices, screen_vertices);
+                    std::cout << "cal matrix: " << calibrationMatrix << std::endl;
 
-                    perspectiveTransform(screen_vertices, projection_corrected_world_corners, calibrationMatrix.inv());
+                    perspectiveTransform(camera_vertices, projection_corrected_world_corners, calibrationMatrix);
 
                     std::cout << projection_corrected_world_corners[0] << std::endl;
                     std::cout << projection_corrected_world_corners[1] << std::endl;
                     std::cout << projection_corrected_world_corners[2] << std::endl;
                     std::cout << projection_corrected_world_corners[3] << std::endl;
+
+                    std::cout << "calibration:" << std::endl;
+                    std::cout << calibration[0].first << " " << calibration[0].second << std::endl;
+                    std::cout << calibration[1].first << " " << calibration[1].second << std::endl;
+                    std::cout << calibration[2].first << " " << calibration[2].second << std::endl;
+                    std::cout << calibration[3].first << " " << calibration[3].second << std::endl;
+                    std::cout << "---" << std::endl;
+
+                    shouldRecalculate = false;
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num9))
@@ -387,7 +400,7 @@ int main () {
                 //     db.cleanup("14");
                 // }
 
-                window.clear();
+                window.clear(sf::Color(0,0,255, 255));
                 renderTexture.clear();
 
                 auto textGraphicsWishes = db.select({"$ wish text $text at $x $y"});
@@ -443,11 +456,37 @@ int main () {
                 renderTexture.display();
                 const sf::Texture &renderTextureCopy = renderTexture.getTexture();
                 sw::ElasticSprite sprite{renderTextureCopy};
-                sprite.setVertexOffset(0, {projection_corrected_world_corners[1].x, projection_corrected_world_corners[1].y});                                // TL
-                sprite.setVertexOffset(1, {projection_corrected_world_corners[0].x, projection_corrected_world_corners[0].y - SCREEN_HEIGHT});                // BL
-                sprite.setVertexOffset(2, {projection_corrected_world_corners[3].x - SCREEN_WIDTH, projection_corrected_world_corners[3].y - SCREEN_HEIGHT}); // BR
-                sprite.setVertexOffset(3, {projection_corrected_world_corners[2].x - SCREEN_WIDTH, projection_corrected_world_corners[2].y});                 // TR
+                sprite.setTextureFlipY(true);
+                // sprite.setUseShader(false);
+                sprite.activatePerspectiveInterpolation();
+                sprite.setVertexOffset(0, {projection_corrected_world_corners[0].x, projection_corrected_world_corners[0].y});                                // TL
+                sprite.setVertexOffset(1, {projection_corrected_world_corners[3].x, projection_corrected_world_corners[3].y - SCREEN_HEIGHT});                // BL
+                sprite.setVertexOffset(2, {projection_corrected_world_corners[2].x - SCREEN_WIDTH, projection_corrected_world_corners[2].y - SCREEN_HEIGHT}); // BR
+                sprite.setVertexOffset(3, {projection_corrected_world_corners[1].x - SCREEN_WIDTH, projection_corrected_world_corners[1].y});     // TR
+                // sprite.setVertexOffset(0, {-calibration[0].first, -calibration[0].second}); // TL
+                // sprite.setVertexOffset(1, {-calibration[3].first, CAMERA_HEIGHT - calibration[3].second});               // BL
+                // sprite.setVertexOffset(2, {CAMERA_WIDTH - calibration[2].first, CAMERA_HEIGHT - calibration[2].second}); // BR
+                // sprite.setVertexOffset(3, {CAMERA_WIDTH - calibration[1].first, -calibration[1].second});  // TR
                 window.draw(sprite);
+
+                // test projecting directly
+                // for (const auto &wish : lineGraphicsWishes)
+                // {
+                //     std::vector<cv::Point2f> line_vertices{
+                //         cv::Point2f{std::stof(wish.get("x1").value), std::stof(wish.get("y1").value)},
+                //         cv::Point2f{std::stof(wish.get("x2").value), std::stof(wish.get("y2").value)}
+                //     };
+                //     std::vector<cv::Point2f> projection_line_points = {
+                //         cv::Point2f(0, 0),
+                //         cv::Point2f(0, 0)};
+                //     perspectiveTransform(line_vertices, projection_line_points, calibrationMatrix);
+                //     sf::Vertex line[] =
+                //     {
+                //         sf::Vertex(sf::Vector2f(projection_line_points[0].x, projection_line_points[0].y), sf::Color::Green),
+                //         sf::Vertex(sf::Vector2f(projection_line_points[1].x, projection_line_points[1].y), sf::Color::Green)
+                //     };
+                //     window.draw(line, 2, sf::Lines);
+                // }
 
                 sf::Text fpsText;
                 fpsText.setFont(font);
@@ -478,6 +517,15 @@ int main () {
                 }
                 verticesOfCalibration[4] = verticesOfCalibration[0];
                 debugWindow.draw(verticesOfCalibration);
+                for (const auto &wish : lineGraphicsWishes)
+                {
+                    sf::Vertex line[] =
+                        {
+                            sf::Vertex(sf::Vector2f(std::stod(wish.get("x1").value), std::stod(wish.get("y1").value))),
+                            sf::Vertex(sf::Vector2f(std::stod(wish.get("x2").value), std::stod(wish.get("y2").value))),
+                        };
+                    debugWindow.draw(line, 2, sf::Lines);
+                }
                 debugWindow.display();
             // }
         }
