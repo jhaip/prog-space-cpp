@@ -1,16 +1,16 @@
 cleanup("13")
 
 p = ""
-for i = 0,500,1 do
-    p = p.."200:"..tostring(1*i)..":"..i..":".."2:,"
+for i = 0,200,1 do
+    p = p.."20:"..tostring(1*i)..":"..i..":".."2:,"
 end
 claim("#13 particles "..p)
 
 register_when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
-    retract("#13 particles $")
-    retract("#13 wish text $ at %")
+    retract("#13 %")
     for index, result in ipairs(results) do
         new_particles = ""
+        local graphics = ""
         i = 0;
         for particle_str in string.gmatch(result["p"], '([^,]+)') do
             p = {}
@@ -23,16 +23,22 @@ register_when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
             local vy = tonumber(p[4])
             local new_x = x + vx
             local new_y = y + vy
-            if new_x < 0 or new_x > 800 then
+            if new_x < 0 or new_x > 300 then
                 vx = -1*vx
             end
-            if new_y < 0 or new_y > 800 then
+            if new_y < 0 or new_y > 300 then
                 vy = -1*vy
             end
             new_particles = new_particles..new_x..":"..new_y..":"..vx..":"..vy..":,"
-            claim("#13 wish text "..i.." at "..tostring(new_x).." "..tostring(new_y))
+            if i > 0 then
+                graphics = graphics..","
+            end
+            graphics = graphics..string.format([===[{"type":"ellipse","options":{"x":%s,"y":%s,"w":10,"h":10}}]===], new_x, new_y)
+            -- claim("#13 wish text "..i.." at "..tostring(new_x).." "..tostring(new_y))
             i = i + 1
         end
+        graphics = string.format([===[[%s]]===], graphics)
+        claim("#13 wish you had graphics "..graphics)
         claim("#13 particles "..new_particles)
     end
 end)

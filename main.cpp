@@ -10,6 +10,7 @@
 #include <iostream>
 #include <map>
 #include <thread>
+#include <math.h>
 #include <nlohmann/json.hpp>
 
 #include "db.cpp"
@@ -403,10 +404,29 @@ int main () {
                     // window.draw(line, 2, sf::Lines);
                     renderTexture.draw(line, 2, sf::Lines);
                 }
-                auto genericGraphicsWishes = db.select({"$ wish graphics $graphics"});
+                auto genericGraphicsWishes = db.select({"$source wish $target had graphics $graphics"});
                 for (const auto &wish : genericGraphicsWishes)
                 {
                     auto j = json::parse(wish.get("graphics").value);
+                    auto sourceStr = wish.get("source").value;
+                    auto targetStr = wish.get("target").value;
+                    auto source = std::stoi(sourceStr);
+                    // std::cout << "wish you had graphics" << source << std::endl;
+                    sf::Transform programTransform;
+                    if (targetStr == "you") {
+                        int main_seen_program_ids_index = 0;
+                        for (auto& id : main_seen_program_ids) {
+                            if (id == source) {
+                                cv::Point2f corner0 = main_seen_program_corners.at(main_seen_program_ids_index).at(0);
+                                cv::Point2f corner1 = main_seen_program_corners.at(main_seen_program_ids_index).at(1);
+                                programTransform.translate(corner0.x, corner0.y);
+                                auto angleDegrees = atan2(corner1.y-corner0.y, corner1.x-corner0.x) * 180 / 3.14159265;
+                                programTransform.rotate(angleDegrees);
+                            }
+                            main_seen_program_ids_index++;
+                        }
+                    }
+                    
                     for (auto &g : j)
                     {
                         const auto typ = g["type"];
@@ -418,7 +438,7 @@ int main () {
                             sf::RectangleShape rectangle(sf::Vector2f(w, h));
                             rectangle.setPosition(x, y);
                             rectangle.setFillColor(sf::Color(100, 250, 50)); // todo
-                            renderTexture.draw(rectangle);
+                            renderTexture.draw(rectangle, programTransform);
                         }
                         else if (typ == "ellipse")
                         {
@@ -430,7 +450,7 @@ int main () {
                             circle.setPosition(x, y);
                             circle.setRadius(w); // TODO: support ellipse
                             circle.setFillColor(sf::Color(250, 100, 50)); // todo
-                            renderTexture.draw(circle);
+                            renderTexture.draw(circle, programTransform);
                         }
                         else if (typ == "line")
                         {
@@ -438,11 +458,10 @@ int main () {
                             auto y1 = g["options"][1];
                             auto x2 = g["options"][2];
                             auto y2 = g["options"][3];
-                            sf::Vertex line[] = {
-                                sf::Vertex(sf::Vector2f(x1, y1)),
-                                sf::Vertex(sf::Vector2f(x2, y2))
-                            };
-                            renderTexture.draw(line, 2, sf::Lines);
+                            sf::VertexArray line(sf::Lines, 2);
+                            line[0] = sf::Vertex(sf::Vector2f(x1, y1));
+                            line[1] = sf::Vertex(sf::Vector2f(x2, y2));
+                            renderTexture.draw(line, programTransform);
                         }
                         else if (typ == "text")
                         {
@@ -453,7 +472,7 @@ int main () {
                             text.setString(g["options"]["text"]);
                             text.setFillColor(sf::Color::Red); // xxx
                             text.setPosition(x, y);
-                            renderTexture.draw(text);
+                            renderTexture.draw(text, programTransform);
                         }
                     }
                 }
