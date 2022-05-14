@@ -2,7 +2,7 @@ cleanup("13")
 
 p = ""
 for i = 0,200,1 do
-    p = p.."20:"..tostring(1*i)..":"..i..":".."2:,"
+    p = p.."20:"..tostring(1*i)..":"..(i*0.1)..":".."0.5:,"
 end
 claim("#13 particles "..p)
 
@@ -11,6 +11,7 @@ register_when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
     for index, result in ipairs(results) do
         new_particles = ""
         local graphics = ""
+        graphics = graphics..string.format([===[{"type":"rectangle","options":{"x":0,"y":0,"w":300,"h":300}}]===])
         i = 0;
         for particle_str in string.gmatch(result["p"], '([^,]+)') do
             p = {}
@@ -30,9 +31,10 @@ register_when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
                 vy = -1*vy
             end
             new_particles = new_particles..new_x..":"..new_y..":"..vx..":"..vy..":,"
-            if i > 0 then
-                graphics = graphics..","
-            end
+            -- if i > 0 then
+            --     graphics = graphics..","
+            -- end
+            graphics = graphics..","
             graphics = graphics..string.format([===[{"type":"ellipse","options":{"x":%s,"y":%s,"w":10,"h":10}}]===], new_x, new_y)
             -- claim("#13 wish text "..i.." at "..tostring(new_x).." "..tostring(new_y))
             i = i + 1
