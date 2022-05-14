@@ -422,6 +422,60 @@ int main () {
                     // window.draw(line, 2, sf::Lines);
                     renderTexture.draw(line, 2, sf::Lines);
                 }
+                auto genericGraphicsWishes = db.select({"$ wish graphics $graphics"});
+                for (const auto &wish : genericGraphicsWishes)
+                {
+                    auto j = json::parse(wish.get("graphics").value);
+                    for (auto &g : j)
+                    {
+                        const auto typ = g["type"];
+                        if (typ == "rectangle") {
+                            auto x = g["options"]["x"];
+                            auto y = g["options"]["y"];
+                            auto w = g["options"]["w"];
+                            auto h = g["options"]["h"];
+                            sf::RectangleShape rectangle(sf::Vector2f(w, h));
+                            rectangle.setPosition(x, y);
+                            rectangle.setFillColor(sf::Color(100, 250, 50)); // todo
+                            renderTexture.draw(rectangle);
+                        }
+                        else if (typ == "ellipse")
+                        {
+                            auto x = g["options"]["x"].get<double>() + g["options"]["w"].get<double>() * 0.5;
+                            auto y = g["options"]["y"].get<double>() + g["options"]["h"].get<double>() * 0.5;
+                            auto w = g["options"]["w"].get<double>() * 0.5;
+                            auto h = g["options"]["h"].get<double>() * 0.5;
+                            sf::CircleShape circle{};
+                            circle.setPosition(x, y);
+                            circle.setRadius(w); // TODO: support ellipse
+                            circle.setFillColor(sf::Color(250, 100, 50)); // todo
+                            renderTexture.draw(circle);
+                        }
+                        else if (typ == "line")
+                        {
+                            auto x1 = g["options"][0];
+                            auto y1 = g["options"][1];
+                            auto x2 = g["options"][2];
+                            auto y2 = g["options"][3];
+                            sf::Vertex line[] = {
+                                sf::Vertex(sf::Vector2f(x1, y1)),
+                                sf::Vertex(sf::Vector2f(x2, y2))
+                            };
+                            renderTexture.draw(line, 2, sf::Lines);
+                        }
+                        else if (typ == "text")
+                        {
+                            auto x = g["options"]["x"];
+                            auto y = g["options"]["y"];
+                            sf::Text text;
+                            text.setFont(font);
+                            text.setString(g["options"]["text"]);
+                            text.setFillColor(sf::Color::Red); // xxx
+                            text.setPosition(x, y);
+                            renderTexture.draw(text);
+                        }
+                    }
+                }
                 auto frameGraphicsWishes = db.select({"$ wish frame at $x $y scale $s"});
                 for (const auto &wish : frameGraphicsWishes) {
                     latestFrameSprite.setPosition(sf::Vector2f(std::stod(wish.get("x").value), std::stod(wish.get("y").value)));
