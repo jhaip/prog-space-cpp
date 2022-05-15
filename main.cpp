@@ -127,6 +127,35 @@ void cvLoop() {
     std::cout << "thread died" << std::endl;
 }
 
+sf::Texture *getTexture(std::map<std::string, sf::Texture *> &m_textureMap, const std::string filePath)
+{
+    // copied from https://github.com/Jfeatherstone/SFMLResource/blob/master/src/ResourceManager.cpp
+    // Search through the map to see if there is already an entry
+    for (auto element : m_textureMap)
+    {
+        // We also want to check that the path is not invalid, as otherwise it would just be
+        // stuck as invalid, because it would technically have an entry in the map
+        if (element.first == filePath) // && element.first != m_invalidTexture)
+            return element.second;
+    }
+
+    // If the code has made it to this point, it hasn't found a matching entry
+    // in the map. We use the new keyword because we want to store these variables
+    // outside of the stack
+    sf::Texture *texture = new sf::Texture();
+
+    // If the texture doesn't load properly, we assign our invalid texture to it
+    if (!texture->loadFromFile(filePath))
+    {
+        // TODO:
+        // texture->loadFromFile(m_invalidTexture);
+    }
+
+    m_textureMap[filePath] = texture;
+
+    return m_textureMap[filePath];
+}
+
 int main () {
         std::thread cvThread(cvLoop);
 
@@ -165,7 +194,8 @@ int main () {
             "../../scripts/11__counting.lua",
             "../../scripts/12__particle.lua",
             "../../scripts/13__particleFast.lua",
-            "../../scripts/14__showWeather.lua"};
+            "../../scripts/14__showWeather.lua",
+            "../../scripts/15__drawFrame.lua"};
 
         int SCREEN_WIDTH = 1920;
         int SCREEN_HEIGHT = 1080;
@@ -187,6 +217,8 @@ int main () {
             cv::Point2f(0, SCREEN_HEIGHT)
         }; // TL TR BR BL
         bool shouldRecalculate = true;
+
+        std::map<std::string, sf::Texture*> textureMap;
 
         sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "SFML works!");
         sf::RenderWindow debugWindow(sf::VideoMode(CAMERA_WIDTH, CAMERA_HEIGHT), "debug");
@@ -473,6 +505,30 @@ int main () {
                             text.setFillColor(sf::Color::Red); // xxx
                             text.setPosition(x, y);
                             renderTexture.draw(text, programTransform);
+                        }
+                        else if (typ == "frame")
+                        {
+                            auto x = g["options"]["x"];
+                            auto y = g["options"]["y"];
+                            auto scale = g["options"]["scale"];
+                            latestFrameSprite.setPosition(sf::Vector2f(x, y));
+                            latestFrameSprite.setScale(scale, scale);
+                            renderTexture.draw(latestFrameSprite, programTransform);
+                            // reset changes to sprite
+                            latestFrameSprite.setPosition(sf::Vector2f(0, 0));
+                            latestFrameSprite.setScale(1, 1);
+                        }
+                        else if (typ == "image")
+                        {
+                            auto x = g["options"]["x"];
+                            auto y = g["options"]["y"];
+                            auto scale = g["options"]["scale"];
+                            auto filepath = g["options"]["filepath"];
+                            sf::Sprite sprite;
+                            sprite.setTexture(*getTexture(textureMap, filepath));
+                            sprite.setPosition(sf::Vector2f(x, y));
+                            sprite.setScale(scale, scale);
+                            renderTexture.draw(sprite, programTransform);
                         }
                     }
                 }
