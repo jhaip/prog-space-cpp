@@ -124,7 +124,7 @@ void cvLoop() {
         imageCopy.copyTo(latestFrame);
         new_data_available = true;
     }
-    std::cout << "thread died" << std::endl;
+    std::cout << "cv thread died" << std::endl;
 }
 
 sf::Texture *getTexture(std::map<std::string, sf::Texture *> &m_textureMap, const std::string filePath)
@@ -195,7 +195,8 @@ int main () {
             "../../scripts/12__particle.lua",
             "../../scripts/13__particleFast.lua",
             "../../scripts/14__showWeather.lua",
-            "../../scripts/15__drawFrame.lua"};
+            "../../scripts/15__drawFrame.lua",
+            "../../scripts/16__subframeAnimation.lua"};
 
         int SCREEN_WIDTH = 1920;
         int SCREEN_HEIGHT = 1080;
@@ -518,6 +519,33 @@ int main () {
                             latestFrameSprite.setPosition(sf::Vector2f(0, 0));
                             latestFrameSprite.setScale(1, 1);
                         }
+                        else if (typ == "subframe")
+                        {
+                            auto x = g["options"]["x"];
+                            auto y = g["options"]["y"];
+                            auto scale = g["options"]["scale"];
+                            auto clipx = g["options"]["clipx"];
+                            auto clipy = g["options"]["clipy"];
+                            auto clipw = g["options"]["clipw"];
+                            auto cliph = g["options"]["cliph"];
+                            sf::RenderTexture subframeTexture;
+                            if (!subframeTexture.create(clipw, cliph))
+                            {
+                                // error...
+                            }
+                            subframeTexture.clear();
+                            // do we need to create a new sprite here?
+                            sf::Sprite innerSprite{latestFrameTexture};
+                            innerSprite.setOrigin(clipx, clipy);
+                            // todo rotate
+                            subframeTexture.draw(innerSprite);
+                            subframeTexture.display();
+                            const sf::Texture &subframeTextureCopy = subframeTexture.getTexture();
+                            sf::Sprite sprite{subframeTextureCopy};
+                            sprite.setPosition(sf::Vector2f(x, y));
+                            sprite.setScale(scale, scale);
+                            renderTexture.draw(sprite, programTransform);
+                        }
                         else if (typ == "image")
                         {
                             auto x = g["options"]["x"];
@@ -641,6 +669,7 @@ int main () {
         }
 
         stop_cv_thread = true;
+        std::cout << "waiting for CV thread to end" << std::endl;
         cvThread.join();
 
         return 0;

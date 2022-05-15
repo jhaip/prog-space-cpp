@@ -323,7 +323,6 @@ public:
         auto it = subscriptions.begin();
         while (it != subscriptions.end())
         {
-            std::cout << "test" << std::endl;
             if ((*it).program_source_id == id)
             {
                 it = subscriptions.erase(it);
