@@ -1,4 +1,3 @@
-cleanup("2")
 register_when("2", {"$ $ is a $animal", "$ $animal is red"}, function (results)
     -- print("I see a: "..result["animal"])
     retract("#2 %")

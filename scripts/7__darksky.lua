@@ -1,6 +1,3 @@
-cleanup("7")
-remove_subs("7")
-print("hello")
 register_when("7", {"$ time is $time"}, function (results)
     retract("#7 %")
     for index, result in ipairs(results) do

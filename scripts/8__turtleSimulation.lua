@@ -1,4 +1,3 @@
-cleanup("8")
 register_when("8", {"$ program $program at $x $y $ $ $ $ $ $", "$program is a $type card"}, function (results)
     -- calculate stack based on X/y order of cards
     retract("#8 state is %")

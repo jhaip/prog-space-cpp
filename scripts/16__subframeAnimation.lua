@@ -40,9 +40,8 @@ register_when("16", {"$ clock time is $time", "#16 current frame is $i at $frame
         else
             claim("#16 current frame is "..new_i.." at "..result["frametime"])
         end
-        -- graphics0 = string.format([===[{"type":"frame","options":{"x":%s,"y":%s,"scale":%s}}]===], 0, 50, 0.1)
         graphics1 = string.format([===[{"type":"subframe","options":{"x":%s,"y":%s,"scale":%s,"clipx":%s,"clipy":%s,"clipw":%s,"cliph":%s}}]===], 0, 50, 1, x1, y1, 120, 200)
-        graphics2 = string.format([===[{"type":"text","options":{"x":%s,"y":%s,"text":"%s"}}]===], 0, 0, new_i)
+        graphics2 = string.format([===[{"type":"text","options":{"x":%s,"y":%s,"text":"%s"}}]===], 50, 0, new_i)
         graphics = string.format([===[[%s,%s]]===], graphics1, graphics2)
         claim("#16 wish you had graphics "..graphics)
     end
