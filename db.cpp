@@ -279,7 +279,13 @@ public:
                         std::cout << "    " << result.toString() << std::endl;
                     luaResults.emplace_back(result.toLuaType());
                 }
-                sub.callback_func(luaResults);
+                try {
+                    sub.callback_func(luaResults);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "Exception when running callback for program " << sub.program_source_id << ": " << e.what() << std::endl;
+                }
             }
         }
     }
