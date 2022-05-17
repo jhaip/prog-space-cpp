@@ -448,13 +448,18 @@ int main () {
                 auto sourceStr = wish.get("source").value;
                 auto source = std::stoi(sourceStr);
                 auto targetStr = wish.get("target").value;
+                std::stringstream ss;
+                ss << wish.get("graphics").value;;
+                std::string unescapedGraphics;
+                ss >> std::quoted(unescapedGraphics);
+                std::cout << unescapedGraphics << std::endl;
                 json j;
                 try {
-                    j = json::parse(wish.get("graphics").value);
+                    j = json::parse(unescapedGraphics);
                 }
                 catch (json::parse_error &ex)
                 {
-                    std::cout << "WARNING: json parse from program " << sourceStr << ": error at byte " << ex.byte << std::endl;
+                    std::cout << "WARNING: json parse from program " << sourceStr << ": " << ex.what() << std::endl;
                     continue;
                 }
                 // std::cout << "wish you had graphics" << source << std::endl;

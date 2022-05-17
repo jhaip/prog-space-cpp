@@ -5,6 +5,8 @@
 #include <map>
 #include <vector>
 #include <chrono>
+#include <sstream>
+#include <iomanip>
 using namespace std::chrono;
 
 struct Term {
@@ -22,6 +24,8 @@ struct Term {
         } else if (input[0] == '#') { // this may be difference syntax than prog-space
             type = "id";
             value = input.substr(1);
+        // } else if (input.size() > 1 && input[0] == '"' && input[input.size()-1] == '"') { // this may be difference syntax than prog-space
+        //     value = input.substr(1, input.size()-2);
         } else {
             value = input;
         }
@@ -102,20 +106,30 @@ struct QueryResult {
     }
 };
 
+std::vector<std::string> mysplit(const std::string &input)
+{
+    std::istringstream iss(input);
+    std::vector<std::string> v;
+    std::string s;
+
+    while (iss >> std::quoted(s))
+    {
+        v.push_back(s);
+    }
+    return v;
+}
+
 class Fact {
 public:
     std::vector<Term> terms;
 
     Fact(const std::string input) {
         // parse fact as a string into a list of typed Terms
-        int start = 0;
-        int end = input.find(" ");
-        while (end != -1) {
-            terms.push_back(Term{input.substr(start, end - start)});
-            start = end + 1;
-            end = input.find(" ", start);
+        std::vector<std::string> termStrs = mysplit(input);
+        for (const auto &s : termStrs)
+        {
+            terms.push_back(Term{s});
         }
-        terms.push_back(Term{input.substr(start, end - start)});
     }
 
     std::string toString() const {
