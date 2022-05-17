@@ -196,7 +196,8 @@ int main () {
             "../../scripts/13__particleFast.lua",
             "../../scripts/14__showWeather.lua",
             "../../scripts/15__drawFrame.lua",
-            "../../scripts/16__subframeAnimation.lua"};
+            "../../scripts/16__subframeAnimation.lua",
+            "../../scripts/17__textEditor.lua"};
 
         int SCREEN_WIDTH = 1920;
         int SCREEN_HEIGHT = 1080;
@@ -279,41 +280,6 @@ int main () {
             }
 
             db.cleanup("0");
-            db.claim("#0 clock time is " + std::to_string(loopCount));
-            int index = 0;
-            for (auto& id : main_seen_program_ids) {
-                cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
-                cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
-                cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
-                cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
-                db.claim("#0 program " + std::to_string(id) + " at " +
-                            std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
-                            std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
-                            std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
-                            std::to_string(corner3.x) + " " + std::to_string(corner3.y));
-                index += 1;
-            }
-            loopCount += 1;
-
-            for (auto &id : programsThatDied)
-            {
-                std::cout << id << " died." << std::endl;
-                db.cleanup(std::to_string(id));
-                db.remove_subs(std::to_string(id));
-            }
-            for (auto &id : newlySeenPrograms)
-            {
-                std::cout << "running " << id << std::endl;
-                try {
-                    lua.script_file(scriptPaths[id]);
-                }
-                catch (const std::exception &e)
-                {
-                    std::cout << "Exception when running program " << id << ": " << e.what() << std::endl;
-                }
-            }
-
-            db.run_subscriptions();
 
             sf::Event event;
             while (window.pollEvent(event))
@@ -328,6 +294,22 @@ int main () {
                     {
                         std::cout << "Enter pressed" << std::endl;
                         db.print();
+                        db.claim("#0 keyboard typed key ENTER");
+                    }
+                    else if (event.key.code == sf::Keyboard::Backspace)
+                    {
+                        db.claim("#0 keyboard typed key BACKSPACE");
+                    }
+                    else if (event.key.code == sf::Keyboard::Space)
+                    {
+                        db.claim("#0 keyboard typed key SPACE");
+                    }
+                }
+                else if (event.type == sf::Event::TextEntered)
+                {
+                    if (event.text.unicode < 128) {
+                        sf::String c = event.text.unicode;
+                        db.claim("#0 keyboard typed key " + c);
                     }
                 }
             }
@@ -418,6 +400,44 @@ int main () {
 
                 shouldRecalculate = false;
             }
+
+            db.claim("#0 clock time is " + std::to_string(loopCount));
+            int index = 0;
+            for (auto &id : main_seen_program_ids)
+            {
+                cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
+                cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
+                cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
+                cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
+                db.claim("#0 program " + std::to_string(id) + " at " +
+                         std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
+                         std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
+                         std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
+                         std::to_string(corner3.x) + " " + std::to_string(corner3.y));
+                index += 1;
+            }
+            loopCount += 1;
+
+            for (auto &id : programsThatDied)
+            {
+                std::cout << id << " died." << std::endl;
+                db.cleanup(std::to_string(id));
+                db.remove_subs(std::to_string(id));
+            }
+            for (auto &id : newlySeenPrograms)
+            {
+                std::cout << "running " << id << std::endl;
+                try
+                {
+                    lua.script_file(scriptPaths[id]);
+                }
+                catch (const std::exception &e)
+                {
+                    std::cout << "Exception when running program " << id << ": " << e.what() << std::endl;
+                }
+            }
+
+            db.run_subscriptions();
 
             window.clear(sf::Color(0, 0, 255, 255));
             renderTexture.clear();
