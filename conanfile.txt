@@ -13,6 +13,7 @@ sfml:shared=True
 opencv:with_tiff=False
 opencv:with_webp=False
 opencv:contrib=True
+opencv:with_ffmpeg=False
 cpp-httplib:with_openssl=True
 cpp-httplib:with_zlib=True
 cpp-httplib:with_brotli=True
