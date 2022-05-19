@@ -37,6 +37,8 @@ register_when("17", {"$ keyboard typed key $key", "$ text cache is $cache"}, fun
             cache = cache.."\\n"
         elseif key == "TAB" then
             cache = cache.."\\t"
+        elseif key == "\"" then
+            cache = cache.."\\\""
         elseif key ~= "RIGHT" and key ~= "LEFT" and key ~= "UP" and key ~= "DOWN" then
             cache = cache..key
         end

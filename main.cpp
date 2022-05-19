@@ -348,7 +348,9 @@ int main () {
                     if (event.text.unicode > 31 && event.text.unicode < 127)
                     {
                         sf::String c = event.text.unicode;
-                        db.claim(Fact{"#0 keyboard typed key " + c});
+                        db.claim(Fact{{Term{"#0"}, Term{"keyboard"}, Term{"typed"}, Term{"key"}, Term{"", c}}});
+                    } else {
+                        std::cout << "unhandled key press unicode " << event.text.unicode << std::endl;
                     }
                 }
             }
