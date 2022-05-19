@@ -123,6 +123,8 @@ class Fact {
 public:
     std::vector<Term> terms;
 
+    Fact(const std::vector<Term> _terms) : terms(_terms) {}
+
     Fact(const std::string input) {
         // parse fact as a string into a list of typed Terms
         std::vector<std::string> termStrs = mysplit(input);
@@ -208,14 +210,14 @@ public:
 class Database
 {
 public:
-    std::map<std::string, Fact> facts;
+    std::vector<Fact> facts;
     std::vector<Subscription> subscriptions;
     bool debug = false;
 
     void print() {
         std::cout << "DATABASE:" << std::endl;
-        for (const auto& n : facts) {
-            std::cout << n.second.toString() << std::endl;
+        for (const auto& f : facts) {
+            std::cout << f.toString() << std::endl;
         }
         std::cout << "SUBS:" << std::endl;
         for (const auto &s : subscriptions)
@@ -226,7 +228,7 @@ public:
 
     void claim(std::string fact_string) {
         if (debug) std::cout << "Claim:" << fact_string << std::endl;
-        facts.emplace(fact_string, Fact{fact_string});
+        facts.push_back(Fact{fact_string});
     }
 
     std::vector<QueryResult> collect_solutions(const std::vector<Fact> &query, const QueryResult &env)
@@ -237,11 +239,10 @@ public:
             return {env};
         }
         std::vector<QueryResult> solutions{};
-        for (auto const &pair : facts)
+        for (const auto &f : facts)
         {
             QueryResult new_env{env};
-            auto did_match = fact_match(query[0], pair.second, new_env);
-            if (did_match)
+            if (fact_match(query[0], f, new_env))
             {
                 std::vector<Fact> sliced_query = std::vector<Fact>(query.begin() + 1, query.end()); // query[1:]
                 auto collected_solutions = collect_solutions(sliced_query, new_env);
@@ -307,35 +308,33 @@ public:
     void retract(std::string factQueryStr)
     {
         Fact factQuery{factQueryStr};
-        if (factQuery.fact_has_variables_or_wildcards())
+        auto it = facts.begin();
+        while (it != facts.end())
         {
-            std::vector<std::string> keysToDelete;
-            for (const auto& f : facts) {
-                QueryResult qr;
-                auto did_match = fact_match(factQuery, f.second, qr);
-                if (did_match) {
-                    keysToDelete.push_back(f.first);
-                }
+            QueryResult qr;
+            if (fact_match(factQuery, *it, qr))
+            {
+                it = facts.erase(it);
             }
-            for (const auto& factKey : keysToDelete) {
-                facts.erase(factKey);
+            else
+            {
+                it++;
             }
-        }
-        else
-        {
-            facts.erase(factQuery.toString());
         }
     }
 
     void cleanup(std::string id) {
-        std::vector<std::string> keysToDelete;
-        for (const auto& n : facts) {
-            if (n.second.terms[0].value == id) {
-                keysToDelete.push_back(n.first);
+        auto it = facts.begin();
+        while (it != facts.end())
+        {
+            if (!(*it).terms.empty() && (*it).terms[0].value == id)
+            {
+                it = facts.erase(it);
             }
-        }
-        for (const auto& factKey : keysToDelete) {
-            facts.erase(factKey);
+            else
+            {
+                it++;
+            }
         }
     }
 
