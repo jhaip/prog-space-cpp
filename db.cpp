@@ -226,9 +226,10 @@ public:
         }
     }
 
-    void claim(std::string fact_string) {
-        if (debug) std::cout << "Claim:" << fact_string << std::endl;
-        facts.push_back(Fact{fact_string});
+    void claim(const Fact &fact) {
+        if (debug)
+            std::cout << "Claim:" << fact.toString() << std::endl;
+        facts.push_back(fact);
     }
 
     std::vector<QueryResult> collect_solutions(const std::vector<Fact> &query, const QueryResult &env)

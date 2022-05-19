@@ -173,7 +173,23 @@ int main () {
         lua.set("my_func", my_function); // way 2
         lua.set_function("my_func", my_function); // way 3
 
-        lua.set_function("claim", &Database::claim, &db);
+        lua.set_function("claim", [&db](sol::variadic_args va) {
+            std::vector<Term> terms;
+            for (auto v : va) {
+                sol::optional<sol::table> table = v;
+                if (table != sol::nullopt) {
+                    auto tableVal = table.value();
+                    terms.push_back(Term{tableVal[1], tableVal[2]});
+                } else {
+                    std::string s = v;
+                    auto subfact = Fact{s};
+                    for (const auto &t : subfact.terms) {
+                        terms.push_back(t);
+                    }
+                }
+            }
+            db.claim(Fact{terms});
+        });
         lua.set_function("when", &Database::when, &db);
         lua.set_function("cleanup", &Database::cleanup, &db);
         lua.set_function("retract", &Database::retract, &db);
@@ -296,22 +312,43 @@ int main () {
                     {
                         std::cout << "Enter pressed" << std::endl;
                         db.print();
-                        db.claim("#0 keyboard typed key ENTER");
+                        db.claim(Fact{"#0 keyboard typed key ENTER"});
                     }
                     else if (event.key.code == sf::Keyboard::Backspace)
                     {
-                        db.claim("#0 keyboard typed key BACKSPACE");
+                        db.claim(Fact{"#0 keyboard typed key BACKSPACE"});
                     }
                     else if (event.key.code == sf::Keyboard::Space)
                     {
-                        db.claim("#0 keyboard typed key SPACE");
+                        db.claim(Fact{"#0 keyboard typed key SPACE"});
+                    }
+                    else if (event.key.code == sf::Keyboard::Tab)
+                    {
+                        db.claim(Fact{"#0 keyboard typed key TAB"});
+                    }
+                    else if (event.key.code == sf::Keyboard::Right)
+                    {
+                        db.claim(Fact{"#0 keyboard typed key RIGHT"});
+                    }
+                    else if (event.key.code == sf::Keyboard::Left)
+                    {
+                        db.claim(Fact{"#0 keyboard typed key LEFT"});
+                    }
+                    else if (event.key.code == sf::Keyboard::Up)
+                    {
+                        db.claim(Fact{"#0 keyboard typed key UP"});
+                    }
+                    else if (event.key.code == sf::Keyboard::Down)
+                    {
+                        db.claim(Fact{"#0 keyboard typed key DOWN"});
                     }
                 }
                 else if (event.type == sf::Event::TextEntered)
                 {
-                    if (event.text.unicode < 128) {
+                    if (event.text.unicode > 31 && event.text.unicode < 127)
+                    {
                         sf::String c = event.text.unicode;
-                        db.claim("#0 keyboard typed key " + c);
+                        db.claim(Fact{"#0 keyboard typed key " + c});
                     }
                 }
             }
@@ -331,35 +368,37 @@ int main () {
                 }
             }
 
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
-                calibrationCorner = 0;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
-                calibrationCorner = 1;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
-                calibrationCorner = 2;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
-                calibrationCorner = 3;
-            }
-            
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-            {
-                calibration[calibrationCorner].first+=2;
-                shouldRecalculate = true;
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-            {
-                calibration[calibrationCorner].first-=2;
-                shouldRecalculate = true;
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-            {
-                calibration[calibrationCorner].second-=2;
-                shouldRecalculate = true;
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-            {
-                calibration[calibrationCorner].second+=2;
-                shouldRecalculate = true;
+            if (debugWindow.hasFocus()) {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
+                    calibrationCorner = 0;
+                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
+                    calibrationCorner = 1;
+                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
+                    calibrationCorner = 2;
+                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
+                    calibrationCorner = 3;
+                }
+                
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+                {
+                    calibration[calibrationCorner].first+=2;
+                    shouldRecalculate = true;
+                }
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+                {
+                    calibration[calibrationCorner].first-=2;
+                    shouldRecalculate = true;
+                }
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+                {
+                    calibration[calibrationCorner].second-=2;
+                    shouldRecalculate = true;
+                }
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+                {
+                    calibration[calibrationCorner].second+=2;
+                    shouldRecalculate = true;
+                }
             }
             if (shouldRecalculate) {
                 std::vector<cv::Point2f> screen_vertices{
@@ -450,14 +489,9 @@ int main () {
                 auto sourceStr = wish.get("source").value;
                 auto source = std::stoi(sourceStr);
                 auto targetStr = wish.get("target").value;
-                std::stringstream ss;
-                ss << wish.get("graphics").value;;
-                std::string unescapedGraphics;
-                ss >> std::quoted(unescapedGraphics);
-                std::cout << unescapedGraphics << std::endl;
                 json j;
                 try {
-                    j = json::parse(unescapedGraphics);
+                    j = json::parse(wish.get("graphics").value);
                 }
                 catch (json::parse_error &ex)
                 {
