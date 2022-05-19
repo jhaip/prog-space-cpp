@@ -9,7 +9,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 #include <map>
-#include <thread>
+#include <future>
 #include <math.h>
 #include <nlohmann/json.hpp>
 
@@ -118,11 +118,13 @@ void cvLoop() {
             cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
             // std::cout << "Seen ID" << ids[0] << std::endl;
         }
-        std::lock_guard<std::mutex> guard(myMutex);
-        seen_program_ids = ids;
-        seen_program_corners = corners;
-        imageCopy.copyTo(latestFrame);
-        new_data_available = true;
+        {
+            std::scoped_lock guard(myMutex);
+            seen_program_ids = ids;
+            seen_program_corners = corners;
+            imageCopy.copyTo(latestFrame);
+            new_data_available = true;
+        }
     }
     std::cout << "cv thread died" << std::endl;
 }
@@ -157,7 +159,7 @@ sf::Texture *getTexture(std::map<std::string, sf::Texture *> &m_textureMap, cons
 }
 
 int main () {
-        std::thread cvThread(cvLoop);
+        auto r = std::async(std::launch::async, cvLoop);
 
         Database db{};
 
@@ -252,7 +254,7 @@ int main () {
             std::vector<int> newlySeenPrograms;
             std::vector<int> programsThatDied;
             {
-                std::lock_guard<std::mutex> guard(myMutex);
+                std::scoped_lock guard(myMutex);
                 if (new_data_available) {
                     new_data_available = false;
                     for (auto &id : seen_program_ids)
@@ -647,7 +649,7 @@ int main () {
 
         stop_cv_thread = true;
         std::cout << "waiting for CV thread to end" << std::endl;
-        cvThread.join();
+        r.wait();
 
         return 0;
 }
