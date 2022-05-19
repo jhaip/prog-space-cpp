@@ -18,7 +18,8 @@ register_when("12", {"$ particle $p at $x $y", "$ particle $p velocity is $vx $v
         end
         claim("#12 particle "..result["p"].." velocity is "..tostring(new_vx).." "..tostring(new_vy))
         claim("#12 particle "..result["p"].." at "..tostring(new_x).." "..tostring(new_y))
-        local graphics = string.format([===[[{"type":"text","options":{"x":%s,"y":%s,"text":"%s"}}]]===], new_x, new_y, result["p"])
-        claim("#12 wish you had graphics "..graphics)
+        local ill = Illumination.new()
+        ill:text(new_x, new_y, result["p"])
+        claim("#12 wish you had graphics", {"", tostring(ill)})
     end
 end)

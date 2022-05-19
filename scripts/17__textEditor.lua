@@ -49,13 +49,13 @@ end)
 register_when("17", {"$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
     retract("#17 wish you had graphics %")
     for index, result in ipairs(results) do
-        local graphics0 = string.format([===[{"type":"text","options":{"x":%s,"y":%s,"text":"%s"}}]===], 0, 50, result["cache"]) 
         local character_width = 20
         local character_height = 26
         local sx = tonumber(result["x"]) * character_width
         local sy = tonumber(result["y"]) * character_height
-        local graphics1 = string.format([===[{"type":"rectangle","options":{"x":%s,"y":%s,"w":%s,"h":%s}}]===], sx, 50+sy, character_width, character_height) 
-        local graphics = string.format([===[[%s,%s]]===], graphics0, graphics1)
-        claim("#17 wish you had graphics", {"", graphics})
+        local ill = Illumination.new()
+        ill:text(0, 50, result["cache"])
+        ill:rectangle(sx, 50+sy, character_width, character_height)
+        claim("#17 wish you had graphics", {"", tostring(ill)})
     end
 end)

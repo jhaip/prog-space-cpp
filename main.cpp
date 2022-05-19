@@ -158,6 +158,42 @@ sf::Texture *getTexture(std::map<std::string, sf::Texture *> &m_textureMap, cons
     return m_textureMap[filePath];
 }
 
+struct Illumination {
+    json graphics;
+
+    void rectangle(double x, double y, double w, double h) {
+		graphics.push_back({{"type","rectangle"},{"options",{{"x", x}, {"y", y}, {"w", w}, {"h", h}}}});
+	}
+
+    void ellipse(double x, double y, double w, double h) {
+		graphics.push_back({{"type","ellipse"},{"options",{{"x", x}, {"y", y}, {"w", w}, {"h", h}}}});
+	}
+
+    void line(double x1, double y1, double x2, double y2) {
+		graphics.push_back({{"type","line"},{"options",{x1,y1,x2,y2}}});
+	}
+
+	void text(double x, double y, std::string text) {
+		graphics.push_back({{"type","text"},{"options",{{"x", x}, {"y", y}, {"text", text}}}});
+	}
+
+    void frame(double x, double y, double scale) {
+		graphics.push_back({{"type","frame"},{"options",{{"x", x}, {"y", y}, {"scale", scale}}}});
+	}
+
+    void subframe(double x, double y, double scale, double clipx, double clipy, double clipw, double cliph) {
+		graphics.push_back({{"type","subframe"},{"options",{{"x", x}, {"y", y}, {"scale", scale}, {"clipx", clipx}, {"clipy", clipy}, {"clipw", clipw}, {"cliph", cliph}}}});
+	}
+
+    void image(double x, double y, double scale, std::string filepath) {
+		graphics.push_back({{"type","image"},{"options",{{"x", x}, {"y", y}, {"scale", scale}, {"filepath", filepath}}}});
+	}
+};
+std::ostream& operator<<( std::ostream& os, const Illumination& ill ) {
+    os << ill.graphics;
+    return os;
+}
+
 int main () {
         auto r = std::async(std::launch::async, cvLoop);
 
@@ -168,6 +204,23 @@ int main () {
         // open those basic lua libraries 
         // again, for print() and other basic utilities
         lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::coroutine, sol::lib::string, sol::lib::io, sol::lib::os);
+
+        lua.new_usertype<Illumination>(
+		     "Illumination", // the name of the class, as you want it to be used in lua List the member
+             "rectangle",
+		     &Illumination::rectangle,
+             "ellipse",
+		     &Illumination::ellipse,
+             "line",
+		     &Illumination::line,
+             "text",
+		     &Illumination::text,
+             "frame",
+		     &Illumination::frame,
+		     "subframe",
+		     &Illumination::subframe,
+             "image",
+		     &Illumination::image);
 
         lua["my_func"] = my_function; // way 1
         lua.set("my_func", my_function); // way 2
@@ -229,6 +282,7 @@ int main () {
         sf::Texture latestFrameTexture;
         sf::Sprite latestFrameSprite;
         std::vector<std::pair<float, float>> calibration = {{226, 124}, {1442, 108}, {1458, 830}, {198, 810}}; // TL TR BR BL
+        // std::vector<std::pair<float, float>> calibration = {{0, 0}, {1920, 0}, {1920, 1080}, {0, 1080}}; // TL TR BR BL
         int calibrationCorner = 0;
         std::vector<cv::Point2f> projection_corrected_world_corners = {
             cv::Point2f(0, 0),

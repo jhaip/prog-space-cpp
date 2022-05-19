@@ -16,8 +16,8 @@ end)
 
 register_when("8", {"(you) turtle $id at $x $y"}, function (results)
     -- todo
-    retract("#8 draw %")
-    for index, result in ipairs(results) do
-        claim("#8 draw graphics "..graphics)
+    -- retract("#8 draw %")
+    -- for index, result in ipairs(results) do
+    --     claim("#8 draw graphics "..graphics)
     end
 end)
