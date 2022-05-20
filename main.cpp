@@ -178,6 +178,13 @@ std::ostream &operator<<(std::ostream &os, const Illumination &ill) {
     return os;
 }
 
+std::string read_file(std::string filepath) {
+    std::ifstream t(filepath);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    return buffer.str();
+}
+
 int main() {
     auto r = std::async(std::launch::async, cvLoop);
 
@@ -191,20 +198,13 @@ int main() {
 
     lua.new_usertype<Illumination>(
         "Illumination", // the name of the class, as you want it to be used in lua List the member
-        "rectangle",
-        &Illumination::rectangle,
-        "ellipse",
-        &Illumination::ellipse,
-        "line",
-        &Illumination::line,
-        "text",
-        sol::overload(&Illumination::text, &Illumination::text_with_color),
-        "frame",
-        &Illumination::frame,
-        "subframe",
-        &Illumination::subframe,
-        "image",
-        &Illumination::image);
+        "rectangle", &Illumination::rectangle,
+        "ellipse", &Illumination::ellipse,
+        "line", &Illumination::line,
+        "text", sol::overload(&Illumination::text, &Illumination::text_with_color),
+        "frame", &Illumination::frame,
+        "subframe", &Illumination::subframe,
+        "image", &Illumination::image);
 
     lua["my_func"] = my_function;             // way 1
     lua.set("my_func", my_function);          // way 2
@@ -254,6 +254,15 @@ int main() {
         "../../scripts/16__subframeAnimation.lua",
         "../../scripts/17__textEditor.lua"};
 
+    int scriptPathIndex = 0;
+    for (const auto &scriptPath : scriptPaths) {
+        if (scriptPath.length() > 0) {
+            auto sourceCode = read_file(scriptPath);
+            db.claim(Fact{{Term{"#00"}, Term{std::to_string(scriptPathIndex)}, Term{"source"}, Term{"code"}, Term{"", sourceCode}}});
+        }
+        scriptPathIndex++;
+    }
+
     int SCREEN_WIDTH = 1920;
     int SCREEN_HEIGHT = 1080;
     int CAMERA_WIDTH = 1920;
@@ -265,8 +274,8 @@ int main() {
     sf::Image latestFrameImage;
     sf::Texture latestFrameTexture;
     sf::Sprite latestFrameSprite;
-    std::vector<std::pair<float, float>> calibration = {{226, 124}, {1442, 108}, {1458, 830}, {198, 810}}; // TL TR BR BL
-    // std::vector<std::pair<float, float>> calibration = {{0, 0}, {1920, 0}, {1920, 1080}, {0, 1080}}; // TL TR BR BL
+    // std::vector<std::pair<float, float>> calibration = {{226, 124}, {1442, 108}, {1458, 830}, {198, 810}}; // TL TR BR BL
+    std::vector<std::pair<float, float>> calibration = {{0, 0}, {1920, 0}, {1920, 1080}, {0, 1080}}; // TL TR BR BL
     int calibrationCorner = 0;
     std::vector<cv::Point2f> projection_corrected_world_corners = {
         cv::Point2f(0, 0),
@@ -287,6 +296,8 @@ int main() {
     if (!renderTexture.create(SCREEN_WIDTH, SCREEN_HEIGHT)) {
         // error...
     }
+
+    // lua.script_file(scriptPaths[17]);
 
     float fps;
     sf::Clock clock;
