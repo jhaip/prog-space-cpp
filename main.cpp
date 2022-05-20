@@ -38,7 +38,7 @@ std::string my_function(int a, std::string b) {
 // from https://github.com/ThePhD/sol2/issues/86
 sol::object jsonToLuaObject(const json &j, sol::state_view &lua) {
     if (j.is_null()) {
-        return sol::make_object(lua, sol::nil);
+        return sol::make_object(lua, sol::lua_nil);
     } else if (j.is_boolean()) {
         return sol::make_object(lua, j.get<bool>());
     } else if (j.is_number()) {
@@ -60,7 +60,7 @@ sol::object jsonToLuaObject(const json &j, sol::state_view &lua) {
         }
         return obj;
     }
-    return sol::make_object(lua, sol::nil);
+    return sol::make_object(lua, sol::lua_nil);
 }
 
 void http_request_thread(std::vector<std::string> query_parts, sol::protected_function callback_func, sol::this_state ts) {
@@ -353,6 +353,12 @@ int main() {
                     db.claim(Fact{"#0 keyboard typed key UP"});
                 } else if (event.key.code == sf::Keyboard::Down) {
                     db.claim(Fact{"#0 keyboard typed key DOWN"});
+                } else if (event.key.control) {
+                    if (event.key.code == sf::Keyboard::P) {
+                        db.claim(Fact{"#0 keyboard typed key CONTROL-p"});
+                    } else if (event.key.code == sf::Keyboard::S) {
+                        db.claim(Fact{"#0 keyboard typed key CONTROL-s"});
+                    }
                 }
             } else if (event.type == sf::Event::TextEntered) {
                 if (event.text.unicode > 31 && event.text.unicode < 127) {
