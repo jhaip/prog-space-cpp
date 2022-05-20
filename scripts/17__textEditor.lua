@@ -34,11 +34,11 @@ register_when("17", {"$ keyboard typed key $key", "$ text cache is $cache"}, fun
         elseif key == "SPACE" then
             cache = cache.." "
         elseif key == "ENTER" then
-            cache = cache.."\\n"
+            cache = cache.."\n"
         elseif key == "TAB" then
-            cache = cache.."\\t"
+            cache = cache.."\t"
         elseif key == "\"" then
-            cache = cache.."\\\""
+            cache = cache.."\""
         elseif key ~= "RIGHT" and key ~= "LEFT" and key ~= "UP" and key ~= "DOWN" then
             cache = cache..key
         end
@@ -49,13 +49,19 @@ end)
 register_when("17", {"$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
     retract("#17 wish you had graphics %")
     for index, result in ipairs(results) do
-        local character_width = 20
-        local character_height = 26
-        local sx = tonumber(result["x"]) * character_width
-        local sy = tonumber(result["y"]) * character_height
         local ill = Illumination.new()
-        ill:text(0, 50, result["cache"])
-        ill:rectangle(sx, 50+sy, character_width, character_height)
+        ill:text(0, 150, result["cache"])
+        local w = ""
+        for i = 0,tonumber(result["y"])-1,1
+        do 
+            w = w.."\n"
+        end
+        for i = 0,tonumber(result["x"])-1,1
+        do 
+            w = w.." "
+        end
+        w = w.."█"
+        ill:text(0, 150, w, {255, 255, 255, 150})
         claim("#17 wish you had graphics", {"", tostring(ill)})
     end
 end)

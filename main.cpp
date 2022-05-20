@@ -176,6 +176,9 @@ struct Illumination {
 	void text(double x, double y, std::string text) {
 		graphics.push_back({{"type","text"},{"options",{{"x", x}, {"y", y}, {"text", text}}}});
 	}
+    void text_with_color(double x, double y, std::string text, std::vector<int> color) {
+		graphics.push_back({{"type","text"},{"options",{{"x", x}, {"y", y}, {"text", text},{"color", color}}}});
+	}
 
     void frame(double x, double y, double scale) {
 		graphics.push_back({{"type","frame"},{"options",{{"x", x}, {"y", y}, {"scale", scale}}}});
@@ -214,7 +217,7 @@ int main () {
              "line",
 		     &Illumination::line,
              "text",
-		     &Illumination::text,
+		     sol::overload(&Illumination::text, &Illumination::text_with_color),
              "frame",
 		     &Illumination::frame,
 		     "subframe",
@@ -297,9 +300,8 @@ int main () {
         sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "SFML works!");
         sf::RenderWindow debugWindow(sf::VideoMode(CAMERA_WIDTH, CAMERA_HEIGHT), "debug");
         sf::Font font;
-        // TODO: find font into project and load that
-        if (!font.loadFromFile("/System/Library/Fonts/Supplemental/Arial.ttf")) {
-            // error...
+        if (!font.loadFromFile("Inconsolata-Regular.ttf")) {
+            std::cerr << "ERROR LOADING FONT" << std::endl;
         }
         sf::RenderTexture renderTexture;
         if (!renderTexture.create(SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -612,8 +614,14 @@ int main () {
                         auto y = g["options"]["y"];
                         sf::Text text;
                         text.setFont(font);
-                        text.setString(g["options"]["text"]);
-                        text.setFillColor(sf::Color::Red); // xxx
+                        std::string textContents = g["options"]["text"];
+                        sf::String sfTmp = sf::String::fromUtf8(textContents.begin(), textContents.end());
+                        text.setString(sfTmp);
+                        if (g["options"].contains("color")) {
+                            text.setFillColor(sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]});
+                        } else {
+                            text.setFillColor(sf::Color::Red); // xxx
+                        }
                         text.setPosition(x, y);
                         renderTexture.draw(text, programTransform);
                     }
