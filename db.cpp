@@ -137,16 +137,6 @@ public:
     std::string toString() const {
         return terms_to_string(terms);
     }
-
-    bool fact_has_variables_or_wildcards() {
-        for (const auto &t : terms)
-        {
-            if (t.type == "variable" || t.type == "postfix") {
-                return true;
-            }
-        }
-        return false;
-    }
 };
 
 bool term_match(const Term &A, const Term &B, QueryResult &env) {
