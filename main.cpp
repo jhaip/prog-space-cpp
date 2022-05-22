@@ -16,6 +16,14 @@
 #include "db.cpp"
 #include "http.cpp"
 
+// hack moving the definition before importing httpserver.cpp
+// because httpserver.cpp depends on it as a global variable
+std::mutex dbMutex;
+
+#include "httpserver.cpp"
+
+using namespace Poco::Net;
+
 using nlohmann::json;
 
 using namespace std::chrono;
@@ -258,6 +266,7 @@ int main() {
     for (const auto &scriptPath : scriptPaths) {
         if (scriptPath.length() > 0) {
             auto sourceCode = read_file(scriptPath);
+            std::scoped_lock guard(dbMutex);
             db.claim(Fact{{Term{"#00"}, Term{std::to_string(scriptPathIndex)}, Term{"source"}, Term{"code"}, Term{"", sourceCode}}});
         }
         scriptPathIndex++;
@@ -299,6 +308,9 @@ int main() {
 
     // lua.script_file(scriptPaths[17]);
 
+    HTTPServer httpServerInstance(new MyRequestHandlerFactory{db}, ServerSocket(9090), new HTTPServerParams);
+    httpServerInstance.start();
+
     float fps;
     sf::Clock clock;
     sf::Time previousTime = clock.getElapsedTime();
@@ -339,163 +351,168 @@ int main() {
             }
         }
 
-        db.cleanup("0");
+        std::vector<QueryResult> genericGraphicsWishes;
 
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
-                window.close();
-            } else if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::Enter) {
-                    std::cout << "Enter pressed" << std::endl;
-                    db.print();
-                    db.claim(Fact{"#0 keyboard typed key ENTER"});
-                } else if (event.key.code == sf::Keyboard::Backspace) {
-                    db.claim(Fact{"#0 keyboard typed key BACKSPACE"});
-                } else if (event.key.code == sf::Keyboard::Space) {
-                    db.claim(Fact{"#0 keyboard typed key SPACE"});
-                } else if (event.key.code == sf::Keyboard::Tab) {
-                    db.claim(Fact{"#0 keyboard typed key TAB"});
-                } else if (event.key.code == sf::Keyboard::Right) {
-                    db.claim(Fact{"#0 keyboard typed key RIGHT"});
-                } else if (event.key.code == sf::Keyboard::Left) {
-                    db.claim(Fact{"#0 keyboard typed key LEFT"});
-                } else if (event.key.code == sf::Keyboard::Up) {
-                    db.claim(Fact{"#0 keyboard typed key UP"});
-                } else if (event.key.code == sf::Keyboard::Down) {
-                    db.claim(Fact{"#0 keyboard typed key DOWN"});
-                } else if (event.key.control) {
-                    if (event.key.code == sf::Keyboard::P) {
-                        db.claim(Fact{"#0 keyboard typed key CONTROL-p"});
-                    } else if (event.key.code == sf::Keyboard::S) {
-                        db.claim(Fact{"#0 keyboard typed key CONTROL-s"});
+        {
+            std::scoped_lock guard(dbMutex);
+            db.cleanup("0");
+
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) {
+                    window.close();
+                } else if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::Enter) {
+                        std::cout << "Enter pressed" << std::endl;
+                        db.print();
+                        db.claim(Fact{"#0 keyboard typed key ENTER"});
+                    } else if (event.key.code == sf::Keyboard::Backspace) {
+                        db.claim(Fact{"#0 keyboard typed key BACKSPACE"});
+                    } else if (event.key.code == sf::Keyboard::Space) {
+                        db.claim(Fact{"#0 keyboard typed key SPACE"});
+                    } else if (event.key.code == sf::Keyboard::Tab) {
+                        db.claim(Fact{"#0 keyboard typed key TAB"});
+                    } else if (event.key.code == sf::Keyboard::Right) {
+                        db.claim(Fact{"#0 keyboard typed key RIGHT"});
+                    } else if (event.key.code == sf::Keyboard::Left) {
+                        db.claim(Fact{"#0 keyboard typed key LEFT"});
+                    } else if (event.key.code == sf::Keyboard::Up) {
+                        db.claim(Fact{"#0 keyboard typed key UP"});
+                    } else if (event.key.code == sf::Keyboard::Down) {
+                        db.claim(Fact{"#0 keyboard typed key DOWN"});
+                    } else if (event.key.control) {
+                        if (event.key.code == sf::Keyboard::P) {
+                            db.claim(Fact{"#0 keyboard typed key CONTROL-p"});
+                        } else if (event.key.code == sf::Keyboard::S) {
+                            db.claim(Fact{"#0 keyboard typed key CONTROL-s"});
+                        }
+                    }
+                } else if (event.type == sf::Event::TextEntered) {
+                    if (event.text.unicode > 31 && event.text.unicode < 127) {
+                        sf::String c = event.text.unicode;
+                        db.claim(Fact{{Term{"#0"}, Term{"keyboard"}, Term{"typed"}, Term{"key"}, Term{"", c}}});
+                    } else {
+                        std::cout << "unhandled key press unicode " << event.text.unicode << std::endl;
                     }
                 }
-            } else if (event.type == sf::Event::TextEntered) {
-                if (event.text.unicode > 31 && event.text.unicode < 127) {
-                    sf::String c = event.text.unicode;
-                    db.claim(Fact{{Term{"#0"}, Term{"keyboard"}, Term{"typed"}, Term{"key"}, Term{"", c}}});
-                } else {
-                    std::cout << "unhandled key press unicode " << event.text.unicode << std::endl;
+            }
+            while (debugWindow.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) {
+                    debugWindow.close();
+                } else if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::Enter) {
+                        std::cout << "Debug Enter pressed" << std::endl;
+                        db.print();
+                    }
                 }
             }
-        }
-        while (debugWindow.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
-                debugWindow.close();
-            } else if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::Enter) {
-                    std::cout << "Debug Enter pressed" << std::endl;
-                    db.print();
+
+            if (debugWindow.hasFocus()) {
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
+                    calibrationCorner = 0;
+                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
+                    calibrationCorner = 1;
+                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
+                    calibrationCorner = 2;
+                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
+                    calibrationCorner = 3;
+                }
+
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+                    calibration[calibrationCorner].first += 2;
+                    shouldRecalculate = true;
+                }
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+                    calibration[calibrationCorner].first -= 2;
+                    shouldRecalculate = true;
+                }
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+                    calibration[calibrationCorner].second -= 2;
+                    shouldRecalculate = true;
+                }
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+                    calibration[calibrationCorner].second += 2;
+                    shouldRecalculate = true;
                 }
             }
-        }
+            if (shouldRecalculate) {
+                std::vector<cv::Point2f> screen_vertices{
+                    cv::Point2f{0, 0},                                      // topLeft
+                    cv::Point2f{(float)SCREEN_WIDTH, 0},                    // Top Right
+                    cv::Point2f{(float)SCREEN_WIDTH, (float)SCREEN_HEIGHT}, // bottomRight
+                    cv::Point2f{0, (float)SCREEN_HEIGHT}                    // bottomLeft
+                };
 
-        if (debugWindow.hasFocus()) {
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
-                calibrationCorner = 0;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
-                calibrationCorner = 1;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
-                calibrationCorner = 2;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
-                calibrationCorner = 3;
+                std::vector<cv::Point2f> camera_vertices{
+                    cv::Point2f{0, 0},                                      // topLeft
+                    cv::Point2f{(float)CAMERA_WIDTH, 0},                    // Top Right
+                    cv::Point2f{(float)CAMERA_WIDTH, (float)CAMERA_HEIGHT}, // bottomRight
+                    cv::Point2f{0, (float)CAMERA_HEIGHT}                    // bottomLeft
+                };
+
+                std::vector<cv::Point2f> dst_vertices{
+                    cv::Point2f{calibration[0].first, calibration[0].second},
+                    cv::Point2f{calibration[1].first, calibration[1].second},
+                    cv::Point2f{calibration[2].first, calibration[2].second},
+                    cv::Point2f{calibration[3].first, calibration[3].second}};
+
+                calibrationMatrix = getPerspectiveTransform(dst_vertices, screen_vertices);
+                std::cout << "cal matrix: " << calibrationMatrix << std::endl;
+
+                perspectiveTransform(camera_vertices, projection_corrected_world_corners, calibrationMatrix);
+
+                std::cout << projection_corrected_world_corners[0] << std::endl;
+                std::cout << projection_corrected_world_corners[1] << std::endl;
+                std::cout << projection_corrected_world_corners[2] << std::endl;
+                std::cout << projection_corrected_world_corners[3] << std::endl;
+
+                std::cout << "calibration:" << std::endl;
+                std::cout << calibration[0].first << " " << calibration[0].second << std::endl;
+                std::cout << calibration[1].first << " " << calibration[1].second << std::endl;
+                std::cout << calibration[2].first << " " << calibration[2].second << std::endl;
+                std::cout << calibration[3].first << " " << calibration[3].second << std::endl;
+                std::cout << "---" << std::endl;
+
+                shouldRecalculate = false;
             }
 
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-                calibration[calibrationCorner].first += 2;
-                shouldRecalculate = true;
+            db.claim("#0 clock time is " + std::to_string(loopCount));
+            int index = 0;
+            for (auto &id : main_seen_program_ids) {
+                cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
+                cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
+                cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
+                cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
+                db.claim("#0 program " + std::to_string(id) + " at " +
+                         std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
+                         std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
+                         std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
+                         std::to_string(corner3.x) + " " + std::to_string(corner3.y));
+                index += 1;
             }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-                calibration[calibrationCorner].first -= 2;
-                shouldRecalculate = true;
+            loopCount += 1;
+
+            for (auto &id : programsThatDied) {
+                std::cout << id << " died." << std::endl;
+                db.cleanup(std::to_string(id));
+                db.remove_subs(std::to_string(id));
             }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-                calibration[calibrationCorner].second -= 2;
-                shouldRecalculate = true;
+            for (auto &id : newlySeenPrograms) {
+                std::cout << "running " << id << std::endl;
+                try {
+                    lua.script_file(scriptPaths[id]);
+                } catch (const std::exception &e) {
+                    std::cout << "Exception when running program " << id << ": " << e.what() << std::endl;
+                }
             }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-                calibration[calibrationCorner].second += 2;
-                shouldRecalculate = true;
-            }
+
+            db.run_subscriptions();
+
+            genericGraphicsWishes = db.select({"$source wish $target had graphics $graphics"});
         }
-        if (shouldRecalculate) {
-            std::vector<cv::Point2f> screen_vertices{
-                cv::Point2f{0, 0},                                      // topLeft
-                cv::Point2f{(float)SCREEN_WIDTH, 0},                    // Top Right
-                cv::Point2f{(float)SCREEN_WIDTH, (float)SCREEN_HEIGHT}, // bottomRight
-                cv::Point2f{0, (float)SCREEN_HEIGHT}                    // bottomLeft
-            };
-
-            std::vector<cv::Point2f> camera_vertices{
-                cv::Point2f{0, 0},                                      // topLeft
-                cv::Point2f{(float)CAMERA_WIDTH, 0},                    // Top Right
-                cv::Point2f{(float)CAMERA_WIDTH, (float)CAMERA_HEIGHT}, // bottomRight
-                cv::Point2f{0, (float)CAMERA_HEIGHT}                    // bottomLeft
-            };
-
-            std::vector<cv::Point2f> dst_vertices{
-                cv::Point2f{calibration[0].first, calibration[0].second},
-                cv::Point2f{calibration[1].first, calibration[1].second},
-                cv::Point2f{calibration[2].first, calibration[2].second},
-                cv::Point2f{calibration[3].first, calibration[3].second}};
-
-            calibrationMatrix = getPerspectiveTransform(dst_vertices, screen_vertices);
-            std::cout << "cal matrix: " << calibrationMatrix << std::endl;
-
-            perspectiveTransform(camera_vertices, projection_corrected_world_corners, calibrationMatrix);
-
-            std::cout << projection_corrected_world_corners[0] << std::endl;
-            std::cout << projection_corrected_world_corners[1] << std::endl;
-            std::cout << projection_corrected_world_corners[2] << std::endl;
-            std::cout << projection_corrected_world_corners[3] << std::endl;
-
-            std::cout << "calibration:" << std::endl;
-            std::cout << calibration[0].first << " " << calibration[0].second << std::endl;
-            std::cout << calibration[1].first << " " << calibration[1].second << std::endl;
-            std::cout << calibration[2].first << " " << calibration[2].second << std::endl;
-            std::cout << calibration[3].first << " " << calibration[3].second << std::endl;
-            std::cout << "---" << std::endl;
-
-            shouldRecalculate = false;
-        }
-
-        db.claim("#0 clock time is " + std::to_string(loopCount));
-        int index = 0;
-        for (auto &id : main_seen_program_ids) {
-            cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
-            cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
-            cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
-            cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
-            db.claim("#0 program " + std::to_string(id) + " at " +
-                     std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
-                     std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
-                     std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
-                     std::to_string(corner3.x) + " " + std::to_string(corner3.y));
-            index += 1;
-        }
-        loopCount += 1;
-
-        for (auto &id : programsThatDied) {
-            std::cout << id << " died." << std::endl;
-            db.cleanup(std::to_string(id));
-            db.remove_subs(std::to_string(id));
-        }
-        for (auto &id : newlySeenPrograms) {
-            std::cout << "running " << id << std::endl;
-            try {
-                lua.script_file(scriptPaths[id]);
-            } catch (const std::exception &e) {
-                std::cout << "Exception when running program " << id << ": " << e.what() << std::endl;
-            }
-        }
-
-        db.run_subscriptions();
 
         window.clear(sf::Color(0, 0, 255, 255));
         renderTexture.clear();
-
-        auto genericGraphicsWishes = db.select({"$source wish $target had graphics $graphics"});
         for (const auto &wish : genericGraphicsWishes) {
             auto sourceStr = wish.get("source").value;
             auto source = std::stoi(sourceStr);
@@ -681,6 +698,9 @@ int main() {
         debugWindow.display();
     }
 
+    std::cout << "stopping http server" << std::endl;
+    httpServerInstance.stop();
+    std::cout << "http server stopped" << std::endl;
     stop_cv_thread = true;
     std::cout << "waiting for CV thread to end" << std::endl;
     r.wait();
