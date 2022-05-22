@@ -153,6 +153,9 @@ struct Illumination {
     void rectangle(double x, double y, double w, double h) {
         graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}}}});
     }
+    void rectangle_with_color(double x, double y, double w, double h, std::vector<int> color) {
+        graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"color", color}}}});
+    }
 
     void ellipse(double x, double y, double w, double h) {
         graphics.push_back({{"type", "ellipse"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}}}});
@@ -206,7 +209,7 @@ int main() {
 
     lua.new_usertype<Illumination>(
         "Illumination", // the name of the class, as you want it to be used in lua List the member
-        "rectangle", &Illumination::rectangle,
+        "rectangle", sol::overload(&Illumination::rectangle, &Illumination::rectangle_with_color),
         "ellipse", &Illumination::ellipse,
         "line", &Illumination::line,
         "text", sol::overload(&Illumination::text, &Illumination::text_with_color),
@@ -260,7 +263,8 @@ int main() {
         "../../scripts/14__showWeather.lua",
         "../../scripts/15__drawFrame.lua",
         "../../scripts/16__subframeAnimation.lua",
-        "../../scripts/17__textEditor.lua"};
+        "../../scripts/17__textEditor.lua",
+        "../../scripts/18__controlLights.lua"};
 
     int scriptPathIndex = 0;
     for (const auto &scriptPath : scriptPaths) {
@@ -549,7 +553,11 @@ int main() {
                     auto h = g["options"]["h"];
                     sf::RectangleShape rectangle(sf::Vector2f(w, h));
                     rectangle.setPosition(x, y);
-                    rectangle.setFillColor(sf::Color(100, 250, 50)); // todo
+                    if (g["options"].contains("color")) {
+                        rectangle.setFillColor(sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]});
+                    } else {
+                        rectangle.setFillColor(sf::Color(100, 250, 50)); // xxx
+                    }
                     renderTexture.draw(rectangle, programTransform);
                 } else if (typ == "ellipse") {
                     auto x = g["options"]["x"].get<double>();

@@ -62,11 +62,14 @@ class MySelectRequestHandler : public HTTPRequestHandler {
         const Poco::URI::QueryParameters qps = Uri.getQueryParameters();
 
         std::string dbQueryStr;
+        bool returnFirstResult = false;
         cout << "Query params:" << endl;
         for (const auto &qp : qps) {
             cout << qp.first << ": " << qp.second << endl;
             if (qp.first == "query") {
                 dbQueryStr = qp.second;
+            } else if (qp.first == "first") {
+                returnFirstResult = true;
             }
         }
         if (dbQueryStr.length() == 0) {
@@ -104,7 +107,11 @@ class MySelectRequestHandler : public HTTPRequestHandler {
             }
             root->set("results", resultsArray);
             ostream &out = resp.send();
-            resultsArray->stringify(out);
+            if (returnFirstResult && resultsArrayIndex > 0) {
+                resultsArray->get(0).extract<Poco::JSON::Object::Ptr>()->stringify(out);
+            } else {
+                resultsArray->stringify(out);
+            }
             // out << "{\"results\": \"ok\"}";
             out.flush();
 
