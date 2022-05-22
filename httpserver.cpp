@@ -84,7 +84,6 @@ class MySelectRequestHandler : public HTTPRequestHandler {
             for (Poco::JSON::Array::ConstIterator it = arr->begin(); it != arr->end(); ++it) {
                 query_parts.push_back(it->convert<std::string>());
             }
-            // make query_parts
             std::vector<QueryResult> queryResults;
             {
                 std::scoped_lock guard(dbMutex);
@@ -96,7 +95,10 @@ class MySelectRequestHandler : public HTTPRequestHandler {
             for (const auto &queryResult : queryResults) {
                 Poco::JSON::Object::Ptr arrObj = new Poco::JSON::Object();
                 for (const auto &result : queryResult.Result) {
-                    arrObj->set(result.first, result.second.toString());
+                    Poco::JSON::Array::Ptr termArray = new Poco::JSON::Array();
+                    termArray->set(0, result.second.type);
+                    termArray->set(1, result.second.value);
+                    arrObj->set(result.first, termArray);
                 }
                 resultsArray->set(resultsArrayIndex++, arrObj);
             }
