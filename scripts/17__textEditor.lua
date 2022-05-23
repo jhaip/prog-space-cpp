@@ -8,50 +8,75 @@ register_when("17", {"$ 3 source code $code"}, function (results)
     end
 end)
 
-register_when("17", {"$ keyboard typed key $key", "$ text cursor at $x $y"}, function (results)
-    for index, result in ipairs(results) do
-        retract("#17 text cursor at %")
-        local x = tonumber(result["x"])
-        local y = tonumber(result["y"])
-        local key = result["key"]
-        if key == "RIGHT" then
-            x = x + 1
-        elseif key == "LEFT" then
-            if x > 0 then
-                x = x - 1
-            end
-        elseif key == "UP" then
-            if y > 0 then
-                y = y - 1
-            end
-        elseif key == "DOWN" then
-            y = y + 1
-        end
-        claim("#17 text cursor at "..x.." "..y)
-    end
-end)
-
-register_when("17", {"$ keyboard typed key $key", "$ text cache is $cache"}, function (results)
+register_when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
     for index, result in ipairs(results) do
         retract("#17 text cache is %")
+        retract("#17 text cursor at %")
         local cache = result["cache"]
         local key = result["key"]
+        local cursor_x = tonumber(result["x"])
+        local cursor_y = tonumber(result["y"])
+        local new_cursor_x = cursor_x
+        local new_cursor_y = cursor_y
+
+        local cursor_position_in_text = 0
+        local n_newlines_seen = 0
+        local offset_in_row = 0
+        local newline = string.byte("\n")
+        for i = 1, #cache do
+            if cache:byte(i) == newline then
+                n_newlines_seen = n_newlines_seen + 1
+                offset_in_row = 0
+            else
+                offset_in_row = offset_in_row + 1
+            end
+            if cursor_y == n_newlines_seen and offset_in_row == cursor_x then
+                cursor_position_in_text = i
+            end
+        end
+        if cursor_position_in_text == 0 then
+            cursor_position_in_text = #cache
+        end
         if key == "BACKSPACE" then
-            cache = cache:sub(1, -2)
+            if cache:byte(cursor_position_in_text) == newline then
+                new_cursor_y = new_cursor_y - 1
+            else
+                new_cursor_x = new_cursor_x - 1
+            end
+            cache = cache:sub(1, cursor_position_in_text-1) .. cache:sub(cursor_position_in_text+1)
         elseif key == "SPACE" then
-            cache = cache.." "
+            cache = cache:sub(1, cursor_position_in_text) .. " " .. cache:sub(cursor_position_in_text+1)
+            new_cursor_x = new_cursor_x + 1
         elseif key == "ENTER" then
-            cache = cache.."\n"
+            cache = cache:sub(1, cursor_position_in_text) .. "\n" .. cache:sub(cursor_position_in_text+1)
+            new_cursor_y = new_cursor_y + 1
+            new_cursor_x = 0
         elseif key == "TAB" then
-            cache = cache.."\t"
+            cache = cache:sub(1, cursor_position_in_text) .. "\t" .. cache:sub(cursor_position_in_text+1)
+            new_cursor_x = new_cursor_x + 1
         elseif key == "\"" then
-            cache = cache.."\""
+            cache = cache:sub(1, cursor_position_in_text) .. "\"" .. cache:sub(cursor_position_in_text+1)
+            new_cursor_x = new_cursor_x + 1
         elseif key == "CONTROL-p" then
             print("print me!")
-        elseif key ~= "RIGHT" and key ~= "LEFT" and key ~= "UP" and key ~= "DOWN" then
-            cache = cache..key
+        elseif key == "RIGHT" then
+            new_cursor_x = cursor_x + 1
+        elseif key == "LEFT" then
+            if cursor_x > 0 then
+                new_cursor_x = cursor_x - 1
+            end
+        elseif key == "UP" then
+            if cursor_y > 0 then
+                new_cursor_y = cursor_y - 1
+            end
+        elseif key == "DOWN" then
+            new_cursor_y = cursor_y + 1
+        else
+            cache = cache:sub(1, cursor_position_in_text) .. key .. cache:sub(cursor_position_in_text+1)
+            new_cursor_x = new_cursor_x + 1
         end
         claim("#17 text cache is", {"", cache})
+        claim("#17 text cursor at "..new_cursor_x.." "..new_cursor_y)
     end
 end)
 
