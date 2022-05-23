@@ -264,7 +264,8 @@ int main() {
         "../../scripts/15__drawFrame.lua",
         "../../scripts/16__subframeAnimation.lua",
         "../../scripts/17__textEditor.lua",
-        "../../scripts/18__controlLights.lua"};
+        "../../scripts/18__controlLights.lua",
+        "../../scripts/19__controlLights2.lua"};
 
     int scriptPathIndex = 0;
     for (const auto &scriptPath : scriptPaths) {
