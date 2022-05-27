@@ -197,7 +197,7 @@ std::string read_file(std::string filepath) {
 }
 
 int main() {
-    auto r = std::async(std::launch::async, cvLoop);
+    // auto r = std::async(std::launch::async, cvLoop);
 
     Database db{};
 
@@ -311,7 +311,7 @@ int main() {
         // error...
     }
 
-    // lua.script_file(scriptPaths[17]);
+    lua.script_file(scriptPaths[17]);
 
     HTTPServer httpServerInstance(new MyRequestHandlerFactory{db}, ServerSocket(9090), new HTTPServerParams);
     httpServerInstance.start();
@@ -712,7 +712,7 @@ int main() {
     std::cout << "http server stopped" << std::endl;
     stop_cv_thread = true;
     std::cout << "waiting for CV thread to end" << std::endl;
-    r.wait();
+    // r.wait();
 
     return 0;
 }
