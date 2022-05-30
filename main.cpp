@@ -121,6 +121,15 @@ void cvLoop() {
     std::cout << "cv thread died" << std::endl;
 }
 
+void fakeCvLoop() {
+    std::scoped_lock guard(myMutex);
+    std::vector<int> my_seen_program_ids{17, 3};
+    std::vector<std::vector<cv::Point2f>> my_seen_program_corners{{cv::Point2f{0, 50}, cv::Point2f{1, 50}, cv::Point2f{1, 51}, cv::Point2f{0, 51}}, {cv::Point2f{0, 0}, cv::Point2f{1, 0}, cv::Point2f{1, 1}, cv::Point2f{0, 1}}};
+    seen_program_ids = my_seen_program_ids;
+    seen_program_corners = my_seen_program_corners;
+    new_data_available = true;
+}
+
 sf::Texture *getTexture(std::map<std::string, sf::Texture *> &m_textureMap, const std::string filePath) {
     // copied from https://github.com/Jfeatherstone/SFMLResource/blob/master/src/ResourceManager.cpp
     // Search through the map to see if there is already an entry
@@ -198,6 +207,7 @@ std::string read_file(std::string filepath) {
 
 int main() {
     // auto r = std::async(std::launch::async, cvLoop);
+    fakeCvLoop();
 
     Database db{};
 
@@ -267,10 +277,13 @@ int main() {
         "../../scripts/18__controlLights.lua",
         "../../scripts/19__controlLights2.lua"};
 
+    std::vector<std::string> scriptsSourceCodes(scriptPaths.size());
+
     int scriptPathIndex = 0;
     for (const auto &scriptPath : scriptPaths) {
         if (scriptPath.length() > 0) {
             auto sourceCode = read_file(scriptPath);
+            scriptsSourceCodes[scriptPathIndex] = sourceCode;
             std::scoped_lock guard(dbMutex);
             db.claim(Fact{{Term{"#00"}, Term{std::to_string(scriptPathIndex)}, Term{"source"}, Term{"code"}, Term{"", sourceCode}}});
         }
@@ -311,8 +324,6 @@ int main() {
         // error...
     }
 
-    lua.script_file(scriptPaths[17]);
-
     HTTPServer httpServerInstance(new MyRequestHandlerFactory{db}, ServerSocket(9090), new HTTPServerParams);
     httpServerInstance.start();
 
@@ -347,7 +358,9 @@ int main() {
                 }
                 main_seen_program_ids = seen_program_ids;
                 main_seen_program_corners = seen_program_corners;
-                cv::cvtColor(latestFrame, main_latestFrame, cv::COLOR_BGR2RGBA);
+                if (!latestFrame.empty()) {
+                    cv::cvtColor(latestFrame, main_latestFrame, cv::COLOR_BGR2RGBA);
+                }
                 latestFrameImage.create(main_latestFrame.cols, main_latestFrame.rows, main_latestFrame.ptr());
                 if (latestFrameTexture.loadFromImage(latestFrameImage)) {
                     latestFrameSprite.setTexture(latestFrameTexture);
@@ -505,10 +518,46 @@ int main() {
             for (auto &id : newlySeenPrograms) {
                 std::cout << "running " << id << std::endl;
                 try {
-                    lua.script_file(scriptPaths[id]);
+                    auto result = lua.safe_script(scriptsSourceCodes[id], sol::script_pass_on_error);
+                    if (!result.valid()) {
+                        sol::error err = result;
+                        std::cerr << "The code has failed to run!\n"
+                                  << err.what() << "\nPanicking and exiting..."
+                                  << std::endl;
+                    }
                 } catch (const std::exception &e) {
                     std::cout << "Exception when running program " << id << ": " << e.what() << std::endl;
                 }
+            }
+
+            auto results = db.select({"$ wish $programId source code is $code"});
+            if (results.size() > 0) {
+                for (const auto &result : results) {
+                    Term programId{"", ""};
+                    Term sourceCode{"", ""};
+                    for (const auto &resultVariable : result.Result) {
+                        if (resultVariable.first == "programId") {
+                            programId = resultVariable.second;
+                        } else if (resultVariable.first == "code") {
+                            sourceCode = resultVariable.second;
+                        }
+                    }
+                    db.retract("$ " + programId.value + " source code $");
+                    db.claim(Fact{{Term{"#00"}, programId, Term{"source"}, Term{"code"}, Term{"", sourceCode.value}}});
+                    db.cleanup(programId.value);
+                    db.remove_subs(programId.value);
+                    if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), stoi(programId.value)) != main_seen_program_ids.end()) {
+                        auto result = lua.safe_script(sourceCode.value, sol::script_pass_on_error);
+                        if (!result.valid()) {
+                            sol::error err = result;
+                            std::cerr << "The code has failed to run!\n"
+                                      << err.what() << "\nPanicking and exiting..."
+                                      << std::endl;
+                        }
+                    }
+                    // TODO: persist the changed source code to disk
+                }
+                db.retract("$ wish $ source code is $");
             }
 
             db.run_subscriptions();

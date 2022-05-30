@@ -64,6 +64,8 @@ register_when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ t
         elseif key == "\"" then
             cache = cache:sub(1, cursor_position_in_text) .. "\"" .. cache:sub(cursor_position_in_text+1)
             new_cursor_x = new_cursor_x + 1
+        elseif key == "CONTROL-s" then
+            claim("#17 wish 3 source code is", {"", cache})
         elseif key == "CONTROL-p" then
             print("print me!")
         elseif key == "RIGHT" then
