@@ -292,7 +292,18 @@ class Database {
         }
     }
 
-    void cleanup(std::string id) {
+    void remove_subs(std::string id) {
+        auto it = subscriptions.begin();
+        while (it != subscriptions.end()) {
+            if ((*it).program_source_id == id) {
+                it = subscriptions.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    void remove_claims_from_source(std::string id) {
         auto it = facts.begin();
         while (it != facts.end()) {
             if (!(*it).terms.empty() && (*it).terms[0].value == id) {
@@ -303,14 +314,8 @@ class Database {
         }
     }
 
-    void remove_subs(std::string id) {
-        auto it = subscriptions.begin();
-        while (it != subscriptions.end()) {
-            if ((*it).program_source_id == id) {
-                it = subscriptions.erase(it);
-            } else {
-                ++it;
-            }
-        }
+    void cleanup(std::string id) {
+        remove_claims_from_source(id);
+        remove_subs(id);
     }
 };

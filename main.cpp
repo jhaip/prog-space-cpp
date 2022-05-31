@@ -519,7 +519,6 @@ int main() {
             for (auto &id : programsThatDied) {
                 std::cout << id << " died." << std::endl;
                 db.cleanup(std::to_string(id));
-                db.remove_subs(std::to_string(id));
             }
             for (auto &id : newlySeenPrograms) {
                 std::cout << "running " << id << std::endl;
@@ -552,7 +551,6 @@ int main() {
                     db.retract("$ " + programIdTerm.value + " source code $");
                     db.claim(Fact{{Term{"#00"}, programIdTerm, Term{"source"}, Term{"code"}, sourceCodeTerm}});
                     db.cleanup(programIdTerm.value);
-                    db.remove_subs(programIdTerm.value);
                     if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), programId) != main_seen_program_ids.end()) {
                         auto result = lua.safe_script(sourceCodeTerm.value, sol::script_pass_on_error);
                         if (!result.valid()) {
