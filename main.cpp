@@ -205,6 +205,12 @@ std::string read_file(std::string filepath) {
     return buffer.str();
 }
 
+void write_to_file(std::string filepath, std::string contents) {
+    std::ofstream out(filepath, std::ofstream::trunc); // override file contents
+    out << contents;
+    out.close();
+}
+
 int main() {
     // auto r = std::async(std::launch::async, cvLoop);
     fakeCvLoop();
@@ -533,21 +539,22 @@ int main() {
             auto results = db.select({"$ wish $programId source code is $code"});
             if (results.size() > 0) {
                 for (const auto &result : results) {
-                    Term programId{"", ""};
-                    Term sourceCode{"", ""};
+                    Term programIdTerm{"", ""};
+                    Term sourceCodeTerm{"", ""};
                     for (const auto &resultVariable : result.Result) {
                         if (resultVariable.first == "programId") {
-                            programId = resultVariable.second;
+                            programIdTerm = resultVariable.second;
                         } else if (resultVariable.first == "code") {
-                            sourceCode = resultVariable.second;
+                            sourceCodeTerm = resultVariable.second;
                         }
                     }
-                    db.retract("$ " + programId.value + " source code $");
-                    db.claim(Fact{{Term{"#00"}, programId, Term{"source"}, Term{"code"}, Term{"", sourceCode.value}}});
-                    db.cleanup(programId.value);
-                    db.remove_subs(programId.value);
-                    if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), stoi(programId.value)) != main_seen_program_ids.end()) {
-                        auto result = lua.safe_script(sourceCode.value, sol::script_pass_on_error);
+                    int programId = stoi(programIdTerm.value);
+                    db.retract("$ " + programIdTerm.value + " source code $");
+                    db.claim(Fact{{Term{"#00"}, programIdTerm, Term{"source"}, Term{"code"}, sourceCodeTerm}});
+                    db.cleanup(programIdTerm.value);
+                    db.remove_subs(programIdTerm.value);
+                    if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), programId) != main_seen_program_ids.end()) {
+                        auto result = lua.safe_script(sourceCodeTerm.value, sol::script_pass_on_error);
                         if (!result.valid()) {
                             sol::error err = result;
                             std::cerr << "The code has failed to run!\n"
@@ -555,7 +562,7 @@ int main() {
                                       << std::endl;
                         }
                     }
-                    // TODO: persist the changed source code to disk
+                    write_to_file(scriptPaths[programId], sourceCodeTerm.value);
                 }
                 db.retract("$ wish $ source code is $");
             }
