@@ -159,11 +159,38 @@ sf::Texture *getTexture(std::map<std::string, sf::Texture *> &m_textureMap, cons
 struct Illumination {
     json graphics;
 
+    void rectangle_table(sol::table opts) {
+        int x = opts.get_or("x", 0);
+        int y = opts.get_or("y", 0);
+        int w = opts.get_or("w", 10);
+        int h = opts.get_or("h", 10);
+        std::vector<int> defaultColor = {255, 255, 255, 255};
+        std::vector<int> fill = defaultColor;
+        std::vector<int> stroke = defaultColor;
+        auto fillTable = opts["fill"];
+        if (fillTable.valid()) {
+            sol::table t = fillTable;
+            std::size_t sz = t.size();
+            for (int i = 1; i <= sz; i++) {
+                fill[i - 1] = t[i];
+            }
+        }
+        auto strokeTable = opts["stroke"];
+        if (strokeTable.valid()) {
+            sol::table t = strokeTable;
+            std::size_t sz = t.size();
+            for (int i = 1; i <= sz; i++) {
+                stroke[i - 1] = t[i];
+            }
+        }
+        int stroke_width = opts.get_or("stroke_width", 1);
+        graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
+    }
     void rectangle(double x, double y, double w, double h) {
         graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}}}});
     }
     void rectangle_with_color(double x, double y, double w, double h, std::vector<int> color) {
-        graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"color", color}}}});
+        graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", color}}}});
     }
 
     void ellipse(double x, double y, double w, double h) {
@@ -225,7 +252,7 @@ int main() {
 
     lua.new_usertype<Illumination>(
         "Illumination", // the name of the class, as you want it to be used in lua List the member
-        "rectangle", sol::overload(&Illumination::rectangle, &Illumination::rectangle_with_color),
+        "rectangle", sol::overload(&Illumination::rectangle_table, &Illumination::rectangle, &Illumination::rectangle_with_color),
         "ellipse", &Illumination::ellipse,
         "line", &Illumination::line,
         "text", sol::overload(&Illumination::text, &Illumination::text_with_color),
@@ -608,10 +635,18 @@ int main() {
                     auto h = g["options"]["h"];
                     sf::RectangleShape rectangle(sf::Vector2f(w, h));
                     rectangle.setPosition(x, y);
-                    if (g["options"].contains("color")) {
-                        rectangle.setFillColor(sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]});
+                    if (g["options"].contains("fill")) {
+                        rectangle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
                     } else {
                         rectangle.setFillColor(sf::Color(100, 250, 50)); // xxx
+                    }
+                    if (g["options"].contains("stroke")) {
+                        rectangle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
+                    } else {
+                        rectangle.setOutlineColor(sf::Color(100, 250, 50)); // xxx
+                    }
+                    if (g["options"].contains("stroke_width")) {
+                        rectangle.setOutlineThickness(g["options"]["stroke_width"]);
                     }
                     renderTexture.draw(rectangle, programTransform);
                 } else if (typ == "ellipse") {
