@@ -9,7 +9,7 @@ register_when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
     for index, result in ipairs(results) do
         new_particles = ""
         local ill = Illumination.new()
-        ill:rectangle(0, 0, 300, 300)
+        ill:rectangle{x=0, y=0, w=300, h=300}
         i = 0;
         for particle_str in string.gmatch(result["p"], '([^,]+)') do
             p = {}
@@ -29,7 +29,7 @@ register_when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
                 vy = -1*vy
             end
             new_particles = new_particles..new_x..":"..new_y..":"..vx..":"..vy..":,"
-            ill:ellipse(new_x, new_y, 10, 10)
+            ill:ellipse{x=new_x, y=new_y, w=10, h=10}
             i = i + 1
         end
         claim("#13 wish you had graphics", {"", tostring(ill)})

@@ -1,5 +1,6 @@
 #define SOL_ALL_SAFETIES_ON 1
 #include "SelbaWard/ElasticSprite.cpp"
+#include "SelbaWard/Line.cpp"
 #include <SFML/Graphics.hpp>
 #include <sol/sol.hpp>
 // #include "SelbaWard/Sprite3d.cpp"
@@ -159,46 +160,50 @@ sf::Texture *getTexture(std::map<std::string, sf::Texture *> &m_textureMap, cons
 struct Illumination {
     json graphics;
 
-    void rectangle_table(sol::table opts) {
+    std::vector<int> get_color_from_lua_table(sol::proxy luaTable, std::vector<int> fallbackColor) {
+        std::vector<int> color = fallbackColor;
+        if (luaTable.valid()) {
+            sol::table t = luaTable;
+            std::size_t sz = t.size();
+            for (int i = 1; i <= sz; i++) {
+                color[i - 1] = t[i];
+            }
+        }
+        return color;
+    }
+
+    void rectangle(sol::table opts) {
         int x = opts.get_or("x", 0);
         int y = opts.get_or("y", 0);
         int w = opts.get_or("w", 10);
         int h = opts.get_or("h", 10);
         std::vector<int> defaultColor = {255, 255, 255, 255};
-        std::vector<int> fill = defaultColor;
-        std::vector<int> stroke = defaultColor;
-        auto fillTable = opts["fill"];
-        if (fillTable.valid()) {
-            sol::table t = fillTable;
-            std::size_t sz = t.size();
-            for (int i = 1; i <= sz; i++) {
-                fill[i - 1] = t[i];
-            }
-        }
-        auto strokeTable = opts["stroke"];
-        if (strokeTable.valid()) {
-            sol::table t = strokeTable;
-            std::size_t sz = t.size();
-            for (int i = 1; i <= sz; i++) {
-                stroke[i - 1] = t[i];
-            }
-        }
+        std::vector<int> fill = get_color_from_lua_table(opts["fill"], fallbackColor);
+        std::vector<int> stroke = get_color_from_lua_table(opts["stroke"], fallbackColor);
         int stroke_width = opts.get_or("stroke_width", 1);
         graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
     }
-    void rectangle(double x, double y, double w, double h) {
-        graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}}}});
-    }
-    void rectangle_with_color(double x, double y, double w, double h, std::vector<int> color) {
-        graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", color}}}});
+
+    void ellipse(sol::table opts) {
+        int x = opts.get_or("x", 0);
+        int y = opts.get_or("y", 0);
+        int w = opts.get_or("w", 10);
+        int h = opts.get_or("h", 10);
+        std::vector<int> defaultColor = {255, 255, 255, 255};
+        std::vector<int> fill = get_color_from_lua_table(opts["fill"], fallbackColor);
+        std::vector<int> stroke = get_color_from_lua_table(opts["stroke"], fallbackColor);
+        int stroke_width = opts.get_or("stroke_width", 1);
+        graphics.push_back({{"type", "ellipse"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
     }
 
-    void ellipse(double x, double y, double w, double h) {
-        graphics.push_back({{"type", "ellipse"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}}}});
-    }
-
-    void line(double x1, double y1, double x2, double y2) {
-        graphics.push_back({{"type", "line"}, {"options", {x1, y1, x2, y2}}});
+    void line(sol::table opts) {
+        int x1 = opts.get_or("x1", 0);
+        int y1 = opts.get_or("y1", 0);
+        int x2 = opts.get_or("x2", 0);
+        int y2 = opts.get_or("y2", 0);
+        std::vector<int> defaultColor = {255, 255, 255, 255};
+        std::vector<int> color = get_color_from_lua_table(opts["color"], fallbackColor);
+        graphics.push_back({{"type", "line"}, {"options", {{"x1", x1}, {"y1", y1}, {"x2", x2}, {"y2", y2}, {"color", color}, {"thickness", thickness}}}});
     }
 
     void text(double x, double y, std::string text) {
@@ -252,7 +257,7 @@ int main() {
 
     lua.new_usertype<Illumination>(
         "Illumination", // the name of the class, as you want it to be used in lua List the member
-        "rectangle", sol::overload(&Illumination::rectangle_table, &Illumination::rectangle, &Illumination::rectangle_with_color),
+        "rectangle", &Illumination::rectangle,
         "ellipse", &Illumination::ellipse,
         "line", &Illumination::line,
         "text", sol::overload(&Illumination::text, &Illumination::text_with_color),
@@ -635,19 +640,9 @@ int main() {
                     auto h = g["options"]["h"];
                     sf::RectangleShape rectangle(sf::Vector2f(w, h));
                     rectangle.setPosition(x, y);
-                    if (g["options"].contains("fill")) {
-                        rectangle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
-                    } else {
-                        rectangle.setFillColor(sf::Color(100, 250, 50)); // xxx
-                    }
-                    if (g["options"].contains("stroke")) {
-                        rectangle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
-                    } else {
-                        rectangle.setOutlineColor(sf::Color(100, 250, 50)); // xxx
-                    }
-                    if (g["options"].contains("stroke_width")) {
-                        rectangle.setOutlineThickness(g["options"]["stroke_width"]);
-                    }
+                    rectangle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
+                    rectangle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
+                    rectangle.setOutlineThickness(g["options"]["stroke_width"]);
                     renderTexture.draw(rectangle, programTransform);
                 } else if (typ == "ellipse") {
                     auto x = g["options"]["x"].get<double>();
@@ -656,17 +651,18 @@ int main() {
                     auto h = g["options"]["h"].get<double>() * 0.5;
                     sf::CircleShape circle{};
                     circle.setPosition(x, y);
-                    circle.setRadius(w);                          // TODO: support ellipse
-                    circle.setFillColor(sf::Color(250, 100, 50)); // todo
+                    circle.setRadius(w); // TODO: support ellipse
+                    circle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
+                    circle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
+                    circle.setOutlineThickness(g["options"]["stroke_width"]);
                     renderTexture.draw(circle, programTransform);
                 } else if (typ == "line") {
-                    auto x1 = g["options"][0];
-                    auto y1 = g["options"][1];
-                    auto x2 = g["options"][2];
-                    auto y2 = g["options"][3];
-                    sf::VertexArray line(sf::Lines, 2);
-                    line[0] = sf::Vertex(sf::Vector2f(x1, y1));
-                    line[1] = sf::Vertex(sf::Vector2f(x2, y2));
+                    auto x1 = g["options"]["x1"].get<double>();
+                    auto y1 = g["options"]["y1"].get<double>();
+                    auto x2 = g["options"]["x2"].get<double>();
+                    auto y2 = g["options"]["y2"].get<double>();
+                    auto thickness = g["options"]["thickness"].get<double>();
+                    sw::Line line{sf::Vertex(sf::Vector2f(x1, y1)), sf::Vertex(sf::Vector2f(x2, y2)), thickness, sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]}};
                     renderTexture.draw(line, programTransform);
                 } else if (typ == "text") {
                     auto x = g["options"]["x"];
