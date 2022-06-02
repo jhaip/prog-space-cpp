@@ -41,8 +41,8 @@ register_when("16", {"$ clock time is $time", "#16 current frame is $i at $frame
             claim("#16 current frame is "..new_i.." at "..result["frametime"])
         end
         local ill = Illumination.new()
-        ill:subframe(0, 50, 1, x1, y1+50, 120, 120)
-        ill:text(50, 0, tostring(new_i))
+        ill:frame{x=0, y=50, clip_x=x1, clip_y=y1+50, clip_w=120, clip_h=120}
+        ill:text{x=50, y=0, text=tostring(new_i)}
         claim("#16 wish you had graphics", {"", tostring(ill)})
     end
 end)

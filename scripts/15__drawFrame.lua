@@ -1,4 +1,4 @@
 local ill = Illumination.new()
-ill:frame(0, 50, 0.2)
-ill:image(-80, 50, 0.3, "/Users/jhaip/Desktop/screenshot.png")
+ill:frame{x=0, y=50, scale=0.2}
+ill:image{x=-80, y=50, scale=0.3, filepath="/Users/jhaip/Desktop/screenshot.png"}
 claim("#15 wish you had graphics", {"", tostring(ill)})

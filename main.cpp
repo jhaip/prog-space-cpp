@@ -160,8 +160,9 @@ sf::Texture *getTexture(std::map<std::string, sf::Texture *> &m_textureMap, cons
 struct Illumination {
     json graphics;
 
-    std::vector<int> get_color_from_lua_table(sol::proxy luaTable, std::vector<int> fallbackColor) {
+    std::vector<int> get_color_from_lua_table(sol::table &opts, std::string key, std::vector<int> fallbackColor) {
         std::vector<int> color = fallbackColor;
+        auto luaTable = opts[key];
         if (luaTable.valid()) {
             sol::table t = luaTable;
             std::size_t sz = t.size();
@@ -177,9 +178,9 @@ struct Illumination {
         int y = opts.get_or("y", 0);
         int w = opts.get_or("w", 10);
         int h = opts.get_or("h", 10);
-        std::vector<int> defaultColor = {255, 255, 255, 255};
-        std::vector<int> fill = get_color_from_lua_table(opts["fill"], fallbackColor);
-        std::vector<int> stroke = get_color_from_lua_table(opts["stroke"], fallbackColor);
+        std::vector<int> fallbackColor = {255, 255, 255, 255};
+        std::vector<int> fill = get_color_from_lua_table(opts, "fill", fallbackColor);
+        std::vector<int> stroke = get_color_from_lua_table(opts, "stroke", fallbackColor);
         int stroke_width = opts.get_or("stroke_width", 1);
         graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
     }
@@ -189,9 +190,9 @@ struct Illumination {
         int y = opts.get_or("y", 0);
         int w = opts.get_or("w", 10);
         int h = opts.get_or("h", 10);
-        std::vector<int> defaultColor = {255, 255, 255, 255};
-        std::vector<int> fill = get_color_from_lua_table(opts["fill"], fallbackColor);
-        std::vector<int> stroke = get_color_from_lua_table(opts["stroke"], fallbackColor);
+        std::vector<int> fallbackColor = {255, 255, 255, 255};
+        std::vector<int> fill = get_color_from_lua_table(opts, "fill", fallbackColor);
+        std::vector<int> stroke = get_color_from_lua_table(opts, "stroke", fallbackColor);
         int stroke_width = opts.get_or("stroke_width", 1);
         graphics.push_back({{"type", "ellipse"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
     }
@@ -201,27 +202,38 @@ struct Illumination {
         int y1 = opts.get_or("y1", 0);
         int x2 = opts.get_or("x2", 0);
         int y2 = opts.get_or("y2", 0);
-        std::vector<int> defaultColor = {255, 255, 255, 255};
-        std::vector<int> color = get_color_from_lua_table(opts["color"], fallbackColor);
+        int thickness = opts.get_or("thickness", 1);
+        std::vector<int> fallbackColor = {255, 255, 255, 255};
+        std::vector<int> color = get_color_from_lua_table(opts, "color", fallbackColor);
         graphics.push_back({{"type", "line"}, {"options", {{"x1", x1}, {"y1", y1}, {"x2", x2}, {"y2", y2}, {"color", color}, {"thickness", thickness}}}});
     }
 
-    void text(double x, double y, std::string text) {
-        graphics.push_back({{"type", "text"}, {"options", {{"x", x}, {"y", y}, {"text", text}}}});
-    }
-    void text_with_color(double x, double y, std::string text, std::vector<int> color) {
-        graphics.push_back({{"type", "text"}, {"options", {{"x", x}, {"y", y}, {"text", text}, {"color", color}}}});
-    }
-
-    void frame(double x, double y, double scale) {
-        graphics.push_back({{"type", "frame"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}}}});
-    }
-
-    void subframe(double x, double y, double scale, double clipx, double clipy, double clipw, double cliph) {
-        graphics.push_back({{"type", "subframe"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"clipx", clipx}, {"clipy", clipy}, {"clipw", clipw}, {"cliph", cliph}}}});
+    void text(sol::table opts) {
+        int x = opts.get_or("x", 0);
+        int y = opts.get_or("y", 0);
+        int fontSize = opts.get_or("size", 30);
+        std::vector<int> fallbackColor = {255, 255, 255, 255};
+        std::vector<int> color = get_color_from_lua_table(opts, "color", fallbackColor);
+        std::string text = opts["text"];
+        graphics.push_back({{"type", "text"}, {"options", {{"x", x}, {"y", y}, {"text", text}, {"color", color}, {"size", fontSize}}}});
     }
 
-    void image(double x, double y, double scale, std::string filepath) {
+    void frame(sol::table opts) {
+        int x = opts.get_or("x", 0);
+        int y = opts.get_or("y", 0);
+        int scale = opts.get_or("scale", 1);
+        int clip_x = opts.get_or("clip_x", 0);
+        int clip_y = opts.get_or("clip_y", 0);
+        int clip_w = opts.get_or("clip_w", -1);
+        int clip_h = opts.get_or("clip_h", -1);
+        graphics.push_back({{"type", "frame"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"clip_x", clip_x}, {"clip_y", clip_y}, {"clip_w", clip_w}, {"clip_h", clip_h}}}});
+    }
+
+    void image(sol::table opts) {
+        int x = opts.get_or("x", 0);
+        int y = opts.get_or("y", 0);
+        int scale = opts.get_or("scale", 1);
+        std::string filepath = opts["filepath"];
         graphics.push_back({{"type", "image"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"filepath", filepath}}}});
     }
 };
@@ -260,9 +272,8 @@ int main() {
         "rectangle", &Illumination::rectangle,
         "ellipse", &Illumination::ellipse,
         "line", &Illumination::line,
-        "text", sol::overload(&Illumination::text, &Illumination::text_with_color),
+        "text", &Illumination::text,
         "frame", &Illumination::frame,
-        "subframe", &Illumination::subframe,
         "image", &Illumination::image);
 
     lua["my_func"] = my_function;             // way 1
@@ -638,11 +649,12 @@ int main() {
                     auto y = g["options"]["y"];
                     auto w = g["options"]["w"];
                     auto h = g["options"]["h"];
+                    auto stroke_width = g["options"]["stroke_width"];
                     sf::RectangleShape rectangle(sf::Vector2f(w, h));
                     rectangle.setPosition(x, y);
                     rectangle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
                     rectangle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
-                    rectangle.setOutlineThickness(g["options"]["stroke_width"]);
+                    rectangle.setOutlineThickness(stroke_width);
                     renderTexture.draw(rectangle, programTransform);
                 } else if (typ == "ellipse") {
                     auto x = g["options"]["x"].get<double>();
@@ -662,41 +674,33 @@ int main() {
                     auto x2 = g["options"]["x2"].get<double>();
                     auto y2 = g["options"]["y2"].get<double>();
                     auto thickness = g["options"]["thickness"].get<double>();
-                    sw::Line line{sf::Vertex(sf::Vector2f(x1, y1)), sf::Vertex(sf::Vector2f(x2, y2)), thickness, sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]}};
+                    sw::Line line{sf::Vector2f(x1, y1), sf::Vector2f(x2, y2), thickness, sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]}};
                     renderTexture.draw(line, programTransform);
                 } else if (typ == "text") {
                     auto x = g["options"]["x"];
                     auto y = g["options"]["y"];
+                    auto size = g["options"]["size"].get<int>();
                     sf::Text text;
-                    text.setFont(font);
                     std::string textContents = g["options"]["text"];
                     sf::String sfTmp = sf::String::fromUtf8(textContents.begin(), textContents.end());
+                    text.setFont(font);
                     text.setString(sfTmp);
-                    if (g["options"].contains("color")) {
-                        text.setFillColor(sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]});
-                    } else {
-                        text.setFillColor(sf::Color::Red); // xxx
-                    }
+                    text.setFillColor(sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]});
+                    text.setCharacterSize(size);
                     text.setPosition(x, y);
                     renderTexture.draw(text, programTransform);
                 } else if (typ == "frame") {
                     auto x = g["options"]["x"];
                     auto y = g["options"]["y"];
                     auto scale = g["options"]["scale"];
-                    latestFrameSprite.setPosition(sf::Vector2f(x, y));
-                    latestFrameSprite.setScale(scale, scale);
-                    renderTexture.draw(latestFrameSprite, programTransform);
-                    // reset changes to sprite
-                    latestFrameSprite.setPosition(sf::Vector2f(0, 0));
-                    latestFrameSprite.setScale(1, 1);
-                } else if (typ == "subframe") {
-                    auto x = g["options"]["x"];
-                    auto y = g["options"]["y"];
-                    auto scale = g["options"]["scale"];
-                    auto clipx = g["options"]["clipx"];
-                    auto clipy = g["options"]["clipy"];
-                    auto clipw = g["options"]["clipw"];
-                    auto cliph = g["options"]["cliph"];
+                    auto clipx = g["options"]["clip_x"];
+                    auto clipy = g["options"]["clip_y"];
+                    auto clipw = g["options"]["clip_w"];
+                    auto cliph = g["options"]["clip_h"];
+                    if (clipw < 0) {
+                        clipw = latestFrameTexture.getSize().x;
+                        cliph = latestFrameTexture.getSize().y;
+                    }
                     sf::RenderTexture subframeTexture;
                     if (!subframeTexture.create(clipw, cliph)) {
                         // error...

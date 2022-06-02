@@ -5,7 +5,7 @@ register_when("9", {"$ clock time is $time"}, function (results)
         local dy = math.sin(tonumber(result["time"])*0.01)*50
         local ill = Illumination.new()
         ill:ellipse{x=50-50, y=100-50, w=100, h=100}
-        ill:line(50, 100, 50+dx, 100+dy)
+        ill:line{x1=50, y1=100, x2=50+dx, y2=100+dy}
         claim("#9 wish you had graphics ", {"", tostring(ill)})
     end
 end)

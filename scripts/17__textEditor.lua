@@ -109,7 +109,7 @@ register_when("17", {"$ text cache is $cache", "$ text cursor at $x $y"}, functi
     retract("#17 wish you had graphics %")
     for index, result in ipairs(results) do
         local ill = Illumination.new()
-        ill:text(0, 50, result["cache"])
+        ill:text{x=0, y=50, text=result["cache"]}
         local w = ""
         for i = 0,tonumber(result["y"])-1,1
         do 
@@ -120,7 +120,7 @@ register_when("17", {"$ text cache is $cache", "$ text cursor at $x $y"}, functi
             w = w.." "
         end
         w = w.."█"
-        ill:text(0, 50, w, {255, 255, 255, 150})
+        ill:text{x=0, y=50, text=w, color={255, 255, 255, 150}}
         claim("#17 wish you had graphics", {"", tostring(ill)})
     end
 end)
