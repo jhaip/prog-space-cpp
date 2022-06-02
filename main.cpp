@@ -38,12 +38,6 @@ std::vector<std::vector<cv::Point2f>> seen_program_corners;
 cv::Mat latestFrame;
 cv::Mat calibrationMatrix;
 
-std::string my_function(int a, std::string b) {
-    // Create a string with the letter 'D' "a" times,
-    // append it to 'b'
-    return b + std::string('D', a);
-}
-
 // from https://github.com/ThePhD/sol2/issues/86
 sol::object jsonToLuaObject(const json &j, sol::state_view &lua) {
     if (j.is_null()) {
@@ -275,10 +269,6 @@ int main() {
         "text", &Illumination::text,
         "frame", &Illumination::frame,
         "image", &Illumination::image);
-
-    lua["my_func"] = my_function;             // way 1
-    lua.set("my_func", my_function);          // way 2
-    lua.set_function("my_func", my_function); // way 3
 
     lua.set_function("claim", [&db](sol::variadic_args va) {
         std::vector<Term> terms;
