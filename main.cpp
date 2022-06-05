@@ -167,68 +167,106 @@ struct Illumination {
         return color;
     }
 
+    int get_int_from_lua_table(sol::table &opts, std::string key, int fallback) {
+        try {
+        double val = fallback;
+        auto luaTable = opts[key];
+        if (luaTable.valid()) {
+            val = luaTable;
+        }
+        return (int)val;
+        } catch (const std::exception &e) {
+            std::cout << "Exception when running xxx " << e.what() << std::endl;
+        }
+        return 0;
+    }
+
     void rectangle(sol::table opts) {
-        int x = opts.get_or("x", 0);
-        int y = opts.get_or("y", 0);
-        int w = opts.get_or("w", 10);
-        int h = opts.get_or("h", 10);
+        try {
+        int x = get_int_from_lua_table(opts, "x", 0);
+        int y = get_int_from_lua_table(opts, "y", 0);
+        int w = get_int_from_lua_table(opts, "w", 10);
+        int h = get_int_from_lua_table(opts, "h", 10);
         std::vector<int> fallbackColor = {255, 255, 255, 255};
         std::vector<int> fill = get_color_from_lua_table(opts, "fill", fallbackColor);
         std::vector<int> stroke = get_color_from_lua_table(opts, "stroke", fallbackColor);
-        int stroke_width = opts.get_or("stroke_width", 1);
+        int stroke_width = get_int_from_lua_table(opts, "stroke_width", 1);
         graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
+        } catch (const std::exception &e) {
+            std::cout << "Exception when running rectangle " << e.what() << std::endl;
+        }
     }
 
     void ellipse(sol::table opts) {
-        int x = opts.get_or("x", 0);
-        int y = opts.get_or("y", 0);
-        int w = opts.get_or("w", 10);
-        int h = opts.get_or("h", 10);
+        try {
+        int x = get_int_from_lua_table(opts, "x", 0);
+        int y = get_int_from_lua_table(opts, "y", 0);
+        int w = get_int_from_lua_table(opts, "w", 10);
+        int h = get_int_from_lua_table(opts, "h", 10);
         std::vector<int> fallbackColor = {255, 255, 255, 255};
         std::vector<int> fill = get_color_from_lua_table(opts, "fill", fallbackColor);
         std::vector<int> stroke = get_color_from_lua_table(opts, "stroke", fallbackColor);
-        int stroke_width = opts.get_or("stroke_width", 1);
+        int stroke_width = get_int_from_lua_table(opts, "stroke_width", 1);
         graphics.push_back({{"type", "ellipse"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
+        } catch (const std::exception &e) {
+            std::cout << "Exception when running ellipse " << e.what() << std::endl;
+        }
     }
 
     void line(sol::table opts) {
-        int x1 = opts.get_or("x1", 0);
-        int y1 = opts.get_or("y1", 0);
-        int x2 = opts.get_or("x2", 0);
-        int y2 = opts.get_or("y2", 0);
-        int thickness = opts.get_or("thickness", 1);
+        try {
+        int x1 = get_int_from_lua_table(opts, "x1", 0);
+        int y1 = get_int_from_lua_table(opts, "y1", 0);
+        int x2 = get_int_from_lua_table(opts, "x2", 0);
+        int y2 = get_int_from_lua_table(opts, "y2", 0);
+        int thickness = get_int_from_lua_table(opts, "thickness", 1);
         std::vector<int> fallbackColor = {255, 255, 255, 255};
         std::vector<int> color = get_color_from_lua_table(opts, "color", fallbackColor);
         graphics.push_back({{"type", "line"}, {"options", {{"x1", x1}, {"y1", y1}, {"x2", x2}, {"y2", y2}, {"color", color}, {"thickness", thickness}}}});
+        } catch (const std::exception &e) {
+            std::cout << "Exception when running line " << e.what() << std::endl;
+        }
     }
 
     void text(sol::table opts) {
-        int x = opts.get_or("x", 0);
-        int y = opts.get_or("y", 0);
-        int fontSize = opts.get_or("size", 30);
+        try {
+        int x = get_int_from_lua_table(opts, "x", 0);
+        int y = get_int_from_lua_table(opts, "y", 0);
+        int fontSize = get_int_from_lua_table(opts, "size", 30);
         std::vector<int> fallbackColor = {255, 255, 255, 255};
         std::vector<int> color = get_color_from_lua_table(opts, "color", fallbackColor);
         std::string text = opts["text"];
         graphics.push_back({{"type", "text"}, {"options", {{"x", x}, {"y", y}, {"text", text}, {"color", color}, {"size", fontSize}}}});
+        } catch (const std::exception &e) {
+            std::cout << "Exception when running text " << e.what() << std::endl;
+        }
     }
 
     void frame(sol::table opts) {
-        int x = opts.get_or("x", 0);
-        int y = opts.get_or("y", 0);
-        int scale = opts.get_or("scale", 1);
-        int clip_x = opts.get_or("clip_x", 0);
-        int clip_y = opts.get_or("clip_y", 0);
-        int clip_w = opts.get_or("clip_w", -1);
-        int clip_h = opts.get_or("clip_h", -1);
+        try {
+        int x = get_int_from_lua_table(opts, "x", 0);
+        int y = get_int_from_lua_table(opts, "y", 0);
+        int scale = get_int_from_lua_table(opts, "scale", 1);
+        int clip_x = get_int_from_lua_table(opts, "clip_x", 0);
+        int clip_y = get_int_from_lua_table(opts, "clip_y", 0);
+        int clip_w = get_int_from_lua_table(opts, "clip_w", -1);
+        int clip_h = get_int_from_lua_table(opts, "clip_h", -1);
         graphics.push_back({{"type", "frame"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"clip_x", clip_x}, {"clip_y", clip_y}, {"clip_w", clip_w}, {"clip_h", clip_h}}}});
+        } catch (const std::exception &e) {
+            std::cout << "Exception when running frame " << e.what() << std::endl;
+        }
     }
 
     void image(sol::table opts) {
+        try {
         int x = opts.get_or("x", 0);
         int y = opts.get_or("y", 0);
         int scale = opts.get_or("scale", 1);
         std::string filepath = opts["filepath"];
         graphics.push_back({{"type", "image"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"filepath", filepath}}}});
+        } catch (const std::exception &e) {
+            std::cout << "Exception when running image " << e.what() << std::endl;
+        }
     }
 };
 std::ostream &operator<<(std::ostream &os, const Illumination &ill) {
@@ -250,8 +288,8 @@ void write_to_file(std::string filepath, std::string contents) {
 }
 
 int main() {
-    // auto r = std::async(std::launch::async, cvLoop);
-    fakeCvLoop();
+    auto r = std::async(std::launch::async, cvLoop);
+    // fakeCvLoop();
 
     Database db{};
 
@@ -314,7 +352,8 @@ int main() {
         "../../scripts/16__subframeAnimation.lua",
         "../../scripts/17__textEditor.lua",
         "../../scripts/18__controlLights.lua",
-        "../../scripts/19__controlLights2.lua"};
+        "../../scripts/19__controlLights2.lua",
+        "../../scripts/20__calibration.lua"};
 
     std::vector<std::string> scriptsSourceCodes(scriptPaths.size());
 
@@ -360,6 +399,10 @@ int main() {
     }
     sf::RenderTexture renderTexture;
     if (!renderTexture.create(SCREEN_WIDTH, SCREEN_HEIGHT)) {
+        // error...
+    }
+    sf::RenderTexture topRenderTexture;
+    if (!topRenderTexture.create(SCREEN_WIDTH, SCREEN_HEIGHT)) {
         // error...
     }
 
@@ -492,12 +535,52 @@ int main() {
                     shouldRecalculate = true;
                 }
             }
+
+            db.claim("#0 clock time is " + std::to_string(loopCount));
+            int index = 0;
+            for (auto &id : main_seen_program_ids) {
+                cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
+                cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
+                cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
+                cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
+                db.claim("#0 program " + std::to_string(id) + " at " +
+                         std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
+                         std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
+                         std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
+                         std::to_string(corner3.x) + " " + std::to_string(corner3.y));
+                // TODO probably move this
+                if (id == 990) {
+                    calibration[0].first = corner0.x;
+                    calibration[0].second = corner0.y;
+                    shouldRecalculate = true;
+                }
+                if (id == 991) {
+                    calibration[1].first = corner1.x;
+                    calibration[1].second = corner1.y;
+                    shouldRecalculate = true;
+                }
+                if (id == 992) {
+                    calibration[2].first = corner2.x;
+                    calibration[2].second = corner2.y;
+                    shouldRecalculate = true;
+                }
+                if (id == 993) {
+                    calibration[3].first = corner3.x;
+                    calibration[3].second = corner3.y;
+                    shouldRecalculate = true;
+                }
+
+                index += 1;
+            }
+            loopCount += 1;
+
             if (shouldRecalculate) {
+                float size = 10;
                 std::vector<cv::Point2f> screen_vertices{
-                    cv::Point2f{0, 0},                                      // topLeft
-                    cv::Point2f{(float)SCREEN_WIDTH, 0},                    // Top Right
-                    cv::Point2f{(float)SCREEN_WIDTH, (float)SCREEN_HEIGHT}, // bottomRight
-                    cv::Point2f{0, (float)SCREEN_HEIGHT}                    // bottomLeft
+                    cv::Point2f{0 + size, 0 + size},                                      // topLeft
+                    cv::Point2f{(float)SCREEN_WIDTH - size, 0 + size},                    // Top Right
+                    cv::Point2f{(float)SCREEN_WIDTH - size, (float)SCREEN_HEIGHT - size}, // bottomRight
+                    cv::Point2f{0+size, (float)SCREEN_HEIGHT-size}                                  // bottomLeft
                 };
 
                 std::vector<cv::Point2f> camera_vertices{
@@ -533,28 +616,18 @@ int main() {
                 shouldRecalculate = false;
             }
 
-            db.claim("#0 clock time is " + std::to_string(loopCount));
-            int index = 0;
-            for (auto &id : main_seen_program_ids) {
-                cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
-                cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
-                cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
-                cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
-                db.claim("#0 program " + std::to_string(id) + " at " +
-                         std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
-                         std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
-                         std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
-                         std::to_string(corner3.x) + " " + std::to_string(corner3.y));
-                index += 1;
-            }
-            loopCount += 1;
-
             for (auto &id : programsThatDied) {
                 std::cout << id << " died." << std::endl;
+                if (id >= scriptsSourceCodes.size()) {
+                    continue;
+                }
                 db.cleanup(std::to_string(id));
             }
             for (auto &id : newlySeenPrograms) {
                 std::cout << "running " << id << std::endl;
+                if (id >= scriptsSourceCodes.size()) {
+                    continue;
+                }
                 try {
                     auto result = lua.safe_script(scriptsSourceCodes[id], sol::script_pass_on_error);
                     if (!result.valid()) {
@@ -584,6 +657,7 @@ int main() {
                     db.retract("$ " + programIdTerm.value + " source code $");
                     db.claim(Fact{{Term{"#00"}, programIdTerm, Term{"source"}, Term{"code"}, sourceCodeTerm}});
                     db.cleanup(programIdTerm.value);
+                    scriptsSourceCodes[programId] = sourceCodeTerm.value;
                     if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), programId) != main_seen_program_ids.end()) {
                         auto result = lua.safe_script(sourceCodeTerm.value, sol::script_pass_on_error);
                         if (!result.valid()) {
@@ -605,6 +679,7 @@ int main() {
 
         window.clear(sf::Color(0, 0, 255, 255));
         renderTexture.clear();
+        topRenderTexture.clear(sf::Color::Transparent);
         for (const auto &wish : genericGraphicsWishes) {
             auto sourceStr = wish.get("source").value;
             auto source = std::stoi(sourceStr);
@@ -618,6 +693,7 @@ int main() {
             }
             // std::cout << "wish you had graphics" << source << std::endl;
             sf::Transform programTransform;
+            sf::RenderTexture *textureTarget = &topRenderTexture;
             if (targetStr == "you") {
                 int main_seen_program_ids_index = 0;
                 for (auto &id : main_seen_program_ids) {
@@ -630,9 +706,11 @@ int main() {
                     }
                     main_seen_program_ids_index++;
                 }
+                textureTarget = &renderTexture;
             }
 
             for (auto &g : j) {
+                try {
                 const auto typ = g["type"];
                 if (typ == "rectangle") {
                     auto x = g["options"]["x"];
@@ -645,7 +723,7 @@ int main() {
                     rectangle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
                     rectangle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
                     rectangle.setOutlineThickness(stroke_width);
-                    renderTexture.draw(rectangle, programTransform);
+                    textureTarget->draw(rectangle, programTransform);
                 } else if (typ == "ellipse") {
                     auto x = g["options"]["x"].get<double>();
                     auto y = g["options"]["y"].get<double>();
@@ -657,7 +735,7 @@ int main() {
                     circle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
                     circle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
                     circle.setOutlineThickness(g["options"]["stroke_width"]);
-                    renderTexture.draw(circle, programTransform);
+                    textureTarget->draw(circle, programTransform);
                 } else if (typ == "line") {
                     auto x1 = g["options"]["x1"].get<double>();
                     auto y1 = g["options"]["y1"].get<double>();
@@ -665,7 +743,7 @@ int main() {
                     auto y2 = g["options"]["y2"].get<double>();
                     auto thickness = g["options"]["thickness"].get<double>();
                     sw::Line line{sf::Vector2f(x1, y1), sf::Vector2f(x2, y2), thickness, sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]}};
-                    renderTexture.draw(line, programTransform);
+                    textureTarget->draw(line, programTransform);
                 } else if (typ == "text") {
                     auto x = g["options"]["x"];
                     auto y = g["options"]["y"];
@@ -678,7 +756,7 @@ int main() {
                     text.setFillColor(sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]});
                     text.setCharacterSize(size);
                     text.setPosition(x, y);
-                    renderTexture.draw(text, programTransform);
+                    textureTarget->draw(text, programTransform);
                 } else if (typ == "frame") {
                     auto x = g["options"]["x"];
                     auto y = g["options"]["y"];
@@ -706,7 +784,7 @@ int main() {
                     sf::Sprite sprite{subframeTextureCopy};
                     sprite.setPosition(sf::Vector2f(x, y));
                     sprite.setScale(scale, scale);
-                    renderTexture.draw(sprite, programTransform);
+                    textureTarget->draw(sprite, programTransform);
                 } else if (typ == "image") {
                     auto x = g["options"]["x"];
                     auto y = g["options"]["y"];
@@ -716,11 +794,15 @@ int main() {
                     sprite.setTexture(*getTexture(textureMap, filepath));
                     sprite.setPosition(sf::Vector2f(x, y));
                     sprite.setScale(scale, scale);
-                    renderTexture.draw(sprite, programTransform);
+                    textureTarget->draw(sprite, programTransform);
+                }
+                } catch (const std::exception &e) {
+                    std::cout << "Exception when running graphics " << g << " " << e.what() << std::endl;
                 }
             }
         }
         renderTexture.display();
+        topRenderTexture.display();
         const sf::Texture &renderTextureCopy = renderTexture.getTexture();
         sw::ElasticSprite sprite{renderTextureCopy};
         sprite.setTextureFlipY(true);
@@ -735,6 +817,10 @@ int main() {
         // sprite.setVertexOffset(2, {CAMERA_WIDTH - calibration[2].first, CAMERA_HEIGHT - calibration[2].second}); // BR
         // sprite.setVertexOffset(3, {CAMERA_WIDTH - calibration[1].first, -calibration[1].second});  // TR
         window.draw(sprite);
+
+        const sf::Texture &topRenderTextureCopy = topRenderTexture.getTexture();
+        sf::Sprite topRenderTextureSprite(topRenderTextureCopy);
+        window.draw(topRenderTextureSprite);
 
         // test projecting directly
         // for (const auto &wish : lineGraphicsWishes)
@@ -759,7 +845,7 @@ int main() {
         fpsText.setFont(font);
         fpsText.setString(std::to_string(fps));
         fpsText.setFillColor(sf::Color::Yellow);
-        fpsText.setPosition(0, 50);
+        fpsText.setPosition(0, 200);
         window.draw(fpsText);
 
         window.display();
