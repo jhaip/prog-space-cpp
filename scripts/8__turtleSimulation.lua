@@ -1,4 +1,4 @@
-register_when("8", {"$ program $program at $x $y $ $ $ $ $ $", "$program is a $type card"}, function (results)
+when("8", {"$ program $program at $x $y $ $ $ $ $ $", "$program is a $type card"}, function (results)
     -- calculate stack based on X/y order of cards
     retract("#8 state is %")
     for index, result in ipairs(results) do
@@ -6,7 +6,7 @@ register_when("8", {"$ program $program at $x $y $ $ $ $ $ $", "$program is a $t
     end
 end)
 
-register_when("8", {"(you) state is $state", "$ time is $timeMs"}, function (results)
+when("8", {"(you) state is $state", "$ time is $timeMs"}, function (results)
     -- todo
     retract("#8 turtle %")
     for index, result in ipairs(results) do
@@ -14,7 +14,7 @@ register_when("8", {"(you) state is $state", "$ time is $timeMs"}, function (res
     end
 end)
 
-register_when("8", {"(you) turtle $id at $x $y"}, function (results)
+when("8", {"(you) turtle $id at $x $y"}, function (results)
     -- todo
     -- retract("#8 draw %")
     -- for index, result in ipairs(results) do

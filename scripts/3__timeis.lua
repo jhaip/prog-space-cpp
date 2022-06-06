@@ -1,4 +1,4 @@
-register_when("3", {"$ clock time is $t"}, function (results)
+when("3", {"$ clock time is $t"}, function (results)
     retract("#3 %")
     for index, result in ipairs(results) do
         claim("#3 time is "..os.time())

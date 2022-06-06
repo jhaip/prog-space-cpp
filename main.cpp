@@ -168,21 +168,15 @@ struct Illumination {
     }
 
     int get_int_from_lua_table(sol::table &opts, std::string key, int fallback) {
-        try {
         double val = fallback;
         auto luaTable = opts[key];
         if (luaTable.valid()) {
             val = luaTable;
         }
         return (int)val;
-        } catch (const std::exception &e) {
-            std::cout << "Exception when running xxx " << e.what() << std::endl;
-        }
-        return 0;
     }
 
     void rectangle(sol::table opts) {
-        try {
         int x = get_int_from_lua_table(opts, "x", 0);
         int y = get_int_from_lua_table(opts, "y", 0);
         int w = get_int_from_lua_table(opts, "w", 10);
@@ -192,13 +186,9 @@ struct Illumination {
         std::vector<int> stroke = get_color_from_lua_table(opts, "stroke", fallbackColor);
         int stroke_width = get_int_from_lua_table(opts, "stroke_width", 1);
         graphics.push_back({{"type", "rectangle"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
-        } catch (const std::exception &e) {
-            std::cout << "Exception when running rectangle " << e.what() << std::endl;
-        }
     }
 
     void ellipse(sol::table opts) {
-        try {
         int x = get_int_from_lua_table(opts, "x", 0);
         int y = get_int_from_lua_table(opts, "y", 0);
         int w = get_int_from_lua_table(opts, "w", 10);
@@ -208,13 +198,9 @@ struct Illumination {
         std::vector<int> stroke = get_color_from_lua_table(opts, "stroke", fallbackColor);
         int stroke_width = get_int_from_lua_table(opts, "stroke_width", 1);
         graphics.push_back({{"type", "ellipse"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"fill", fill}, {"stroke", stroke}, {"stroke_width", stroke_width}}}});
-        } catch (const std::exception &e) {
-            std::cout << "Exception when running ellipse " << e.what() << std::endl;
-        }
     }
 
     void line(sol::table opts) {
-        try {
         int x1 = get_int_from_lua_table(opts, "x1", 0);
         int y1 = get_int_from_lua_table(opts, "y1", 0);
         int x2 = get_int_from_lua_table(opts, "x2", 0);
@@ -223,13 +209,9 @@ struct Illumination {
         std::vector<int> fallbackColor = {255, 255, 255, 255};
         std::vector<int> color = get_color_from_lua_table(opts, "color", fallbackColor);
         graphics.push_back({{"type", "line"}, {"options", {{"x1", x1}, {"y1", y1}, {"x2", x2}, {"y2", y2}, {"color", color}, {"thickness", thickness}}}});
-        } catch (const std::exception &e) {
-            std::cout << "Exception when running line " << e.what() << std::endl;
-        }
     }
 
     void text(sol::table opts) {
-        try {
         int x = get_int_from_lua_table(opts, "x", 0);
         int y = get_int_from_lua_table(opts, "y", 0);
         int fontSize = get_int_from_lua_table(opts, "size", 30);
@@ -237,13 +219,9 @@ struct Illumination {
         std::vector<int> color = get_color_from_lua_table(opts, "color", fallbackColor);
         std::string text = opts["text"];
         graphics.push_back({{"type", "text"}, {"options", {{"x", x}, {"y", y}, {"text", text}, {"color", color}, {"size", fontSize}}}});
-        } catch (const std::exception &e) {
-            std::cout << "Exception when running text " << e.what() << std::endl;
-        }
     }
 
     void frame(sol::table opts) {
-        try {
         int x = get_int_from_lua_table(opts, "x", 0);
         int y = get_int_from_lua_table(opts, "y", 0);
         int scale = get_int_from_lua_table(opts, "scale", 1);
@@ -252,21 +230,14 @@ struct Illumination {
         int clip_w = get_int_from_lua_table(opts, "clip_w", -1);
         int clip_h = get_int_from_lua_table(opts, "clip_h", -1);
         graphics.push_back({{"type", "frame"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"clip_x", clip_x}, {"clip_y", clip_y}, {"clip_w", clip_w}, {"clip_h", clip_h}}}});
-        } catch (const std::exception &e) {
-            std::cout << "Exception when running frame " << e.what() << std::endl;
-        }
     }
 
     void image(sol::table opts) {
-        try {
         int x = opts.get_or("x", 0);
         int y = opts.get_or("y", 0);
         int scale = opts.get_or("scale", 1);
         std::string filepath = opts["filepath"];
         graphics.push_back({{"type", "image"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"filepath", filepath}}}});
-        } catch (const std::exception &e) {
-            std::cout << "Exception when running image " << e.what() << std::endl;
-        }
     }
 };
 std::ostream &operator<<(std::ostream &os, const Illumination &ill) {
@@ -325,10 +296,9 @@ int main() {
         }
         db.claim(Fact{terms});
     });
-    lua.set_function("when", &Database::when, &db);
     lua.set_function("cleanup", &Database::cleanup, &db);
     lua.set_function("retract", &Database::retract, &db);
-    lua.set_function("register_when", &Database::register_when, &db);
+    lua.set_function("when", &Database::when, &db);
     lua.set_function("remove_subs", &Database::remove_subs, &db);
     lua.set_function("http_request", http_request);
 
@@ -580,7 +550,7 @@ int main() {
                     cv::Point2f{0 + size, 0 + size},                                      // topLeft
                     cv::Point2f{(float)SCREEN_WIDTH - size, 0 + size},                    // Top Right
                     cv::Point2f{(float)SCREEN_WIDTH - size, (float)SCREEN_HEIGHT - size}, // bottomRight
-                    cv::Point2f{0+size, (float)SCREEN_HEIGHT-size}                                  // bottomLeft
+                    cv::Point2f{0 + size, (float)SCREEN_HEIGHT - size}                    // bottomLeft
                 };
 
                 std::vector<cv::Point2f> camera_vertices{
@@ -711,91 +681,91 @@ int main() {
 
             for (auto &g : j) {
                 try {
-                const auto typ = g["type"];
-                if (typ == "rectangle") {
-                    auto x = g["options"]["x"];
-                    auto y = g["options"]["y"];
-                    auto w = g["options"]["w"];
-                    auto h = g["options"]["h"];
-                    auto stroke_width = g["options"]["stroke_width"];
-                    sf::RectangleShape rectangle(sf::Vector2f(w, h));
-                    rectangle.setPosition(x, y);
-                    rectangle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
-                    rectangle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
-                    rectangle.setOutlineThickness(stroke_width);
-                    textureTarget->draw(rectangle, programTransform);
-                } else if (typ == "ellipse") {
-                    auto x = g["options"]["x"].get<double>();
-                    auto y = g["options"]["y"].get<double>();
-                    auto w = g["options"]["w"].get<double>() * 0.5;
-                    auto h = g["options"]["h"].get<double>() * 0.5;
-                    sf::CircleShape circle{};
-                    circle.setPosition(x, y);
-                    circle.setRadius(w); // TODO: support ellipse
-                    circle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
-                    circle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
-                    circle.setOutlineThickness(g["options"]["stroke_width"]);
-                    textureTarget->draw(circle, programTransform);
-                } else if (typ == "line") {
-                    auto x1 = g["options"]["x1"].get<double>();
-                    auto y1 = g["options"]["y1"].get<double>();
-                    auto x2 = g["options"]["x2"].get<double>();
-                    auto y2 = g["options"]["y2"].get<double>();
-                    auto thickness = g["options"]["thickness"].get<double>();
-                    sw::Line line{sf::Vector2f(x1, y1), sf::Vector2f(x2, y2), thickness, sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]}};
-                    textureTarget->draw(line, programTransform);
-                } else if (typ == "text") {
-                    auto x = g["options"]["x"];
-                    auto y = g["options"]["y"];
-                    auto size = g["options"]["size"].get<int>();
-                    sf::Text text;
-                    std::string textContents = g["options"]["text"];
-                    sf::String sfTmp = sf::String::fromUtf8(textContents.begin(), textContents.end());
-                    text.setFont(font);
-                    text.setString(sfTmp);
-                    text.setFillColor(sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]});
-                    text.setCharacterSize(size);
-                    text.setPosition(x, y);
-                    textureTarget->draw(text, programTransform);
-                } else if (typ == "frame") {
-                    auto x = g["options"]["x"];
-                    auto y = g["options"]["y"];
-                    auto scale = g["options"]["scale"];
-                    auto clipx = g["options"]["clip_x"];
-                    auto clipy = g["options"]["clip_y"];
-                    auto clipw = g["options"]["clip_w"];
-                    auto cliph = g["options"]["clip_h"];
-                    if (clipw < 0) {
-                        clipw = latestFrameTexture.getSize().x;
-                        cliph = latestFrameTexture.getSize().y;
+                    const auto typ = g["type"];
+                    if (typ == "rectangle") {
+                        auto x = g["options"]["x"];
+                        auto y = g["options"]["y"];
+                        auto w = g["options"]["w"];
+                        auto h = g["options"]["h"];
+                        auto stroke_width = g["options"]["stroke_width"];
+                        sf::RectangleShape rectangle(sf::Vector2f(w, h));
+                        rectangle.setPosition(x, y);
+                        rectangle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
+                        rectangle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
+                        rectangle.setOutlineThickness(stroke_width);
+                        textureTarget->draw(rectangle, programTransform);
+                    } else if (typ == "ellipse") {
+                        auto x = g["options"]["x"].get<double>();
+                        auto y = g["options"]["y"].get<double>();
+                        auto w = g["options"]["w"].get<double>() * 0.5;
+                        auto h = g["options"]["h"].get<double>() * 0.5;
+                        sf::CircleShape circle{};
+                        circle.setPosition(x, y);
+                        circle.setRadius(w); // TODO: support ellipse
+                        circle.setFillColor(sf::Color{g["options"]["fill"][0], g["options"]["fill"][1], g["options"]["fill"][2], g["options"]["fill"][3]});
+                        circle.setOutlineColor(sf::Color{g["options"]["stroke"][0], g["options"]["stroke"][1], g["options"]["stroke"][2], g["options"]["stroke"][3]});
+                        circle.setOutlineThickness(g["options"]["stroke_width"]);
+                        textureTarget->draw(circle, programTransform);
+                    } else if (typ == "line") {
+                        auto x1 = g["options"]["x1"].get<double>();
+                        auto y1 = g["options"]["y1"].get<double>();
+                        auto x2 = g["options"]["x2"].get<double>();
+                        auto y2 = g["options"]["y2"].get<double>();
+                        auto thickness = g["options"]["thickness"].get<double>();
+                        sw::Line line{sf::Vector2f(x1, y1), sf::Vector2f(x2, y2), thickness, sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]}};
+                        textureTarget->draw(line, programTransform);
+                    } else if (typ == "text") {
+                        auto x = g["options"]["x"];
+                        auto y = g["options"]["y"];
+                        auto size = g["options"]["size"].get<int>();
+                        sf::Text text;
+                        std::string textContents = g["options"]["text"];
+                        sf::String sfTmp = sf::String::fromUtf8(textContents.begin(), textContents.end());
+                        text.setFont(font);
+                        text.setString(sfTmp);
+                        text.setFillColor(sf::Color{g["options"]["color"][0], g["options"]["color"][1], g["options"]["color"][2], g["options"]["color"][3]});
+                        text.setCharacterSize(size);
+                        text.setPosition(x, y);
+                        textureTarget->draw(text, programTransform);
+                    } else if (typ == "frame") {
+                        auto x = g["options"]["x"];
+                        auto y = g["options"]["y"];
+                        auto scale = g["options"]["scale"];
+                        auto clipx = g["options"]["clip_x"];
+                        auto clipy = g["options"]["clip_y"];
+                        auto clipw = g["options"]["clip_w"];
+                        auto cliph = g["options"]["clip_h"];
+                        if (clipw < 0) {
+                            clipw = latestFrameTexture.getSize().x;
+                            cliph = latestFrameTexture.getSize().y;
+                        }
+                        sf::RenderTexture subframeTexture;
+                        if (!subframeTexture.create(clipw, cliph)) {
+                            // error...
+                        }
+                        subframeTexture.clear();
+                        // do we need to create a new sprite here?
+                        sf::Sprite innerSprite{latestFrameTexture};
+                        innerSprite.setOrigin(clipx, clipy);
+                        // todo rotate
+                        subframeTexture.draw(innerSprite);
+                        subframeTexture.display();
+                        const sf::Texture &subframeTextureCopy = subframeTexture.getTexture();
+                        sf::Sprite sprite{subframeTextureCopy};
+                        sprite.setPosition(sf::Vector2f(x, y));
+                        sprite.setScale(scale, scale);
+                        textureTarget->draw(sprite, programTransform);
+                    } else if (typ == "image") {
+                        auto x = g["options"]["x"];
+                        auto y = g["options"]["y"];
+                        auto scale = g["options"]["scale"];
+                        auto filepath = g["options"]["filepath"];
+                        sf::Sprite sprite;
+                        sprite.setTexture(*getTexture(textureMap, filepath));
+                        sprite.setPosition(sf::Vector2f(x, y));
+                        sprite.setScale(scale, scale);
+                        textureTarget->draw(sprite, programTransform);
                     }
-                    sf::RenderTexture subframeTexture;
-                    if (!subframeTexture.create(clipw, cliph)) {
-                        // error...
-                    }
-                    subframeTexture.clear();
-                    // do we need to create a new sprite here?
-                    sf::Sprite innerSprite{latestFrameTexture};
-                    innerSprite.setOrigin(clipx, clipy);
-                    // todo rotate
-                    subframeTexture.draw(innerSprite);
-                    subframeTexture.display();
-                    const sf::Texture &subframeTextureCopy = subframeTexture.getTexture();
-                    sf::Sprite sprite{subframeTextureCopy};
-                    sprite.setPosition(sf::Vector2f(x, y));
-                    sprite.setScale(scale, scale);
-                    textureTarget->draw(sprite, programTransform);
-                } else if (typ == "image") {
-                    auto x = g["options"]["x"];
-                    auto y = g["options"]["y"];
-                    auto scale = g["options"]["scale"];
-                    auto filepath = g["options"]["filepath"];
-                    sf::Sprite sprite;
-                    sprite.setTexture(*getTexture(textureMap, filepath));
-                    sprite.setPosition(sf::Vector2f(x, y));
-                    sprite.setScale(scale, scale);
-                    textureTarget->draw(sprite, programTransform);
-                }
                 } catch (const std::exception &e) {
                     std::cout << "Exception when running graphics " << g << " " << e.what() << std::endl;
                 }

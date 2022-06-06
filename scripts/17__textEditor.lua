@@ -1,14 +1,14 @@
 claim("#17 text cache is -")
 claim("#17 text cursor at 0 0")
 
-register_when("17", {"$ 3 source code $code"}, function (results)
+when("17", {"$ 3 source code $code"}, function (results)
     for index, result in ipairs(results) do
         retract("#17 text cache is %")
         claim("#17 text cache is", {"", result["code"]})
     end
 end)
 
-register_when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
+when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
     for index, result in ipairs(results) do
         retract("#17 text cache is %")
         retract("#17 text cursor at %")
@@ -105,7 +105,7 @@ register_when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ t
     end
 end)
 
-register_when("17", {"$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
+when("17", {"$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
     retract("#17 wish you had graphics %")
     for index, result in ipairs(results) do
         local ill = Illumination.new()

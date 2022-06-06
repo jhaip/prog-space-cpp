@@ -1,4 +1,4 @@
-register_when("5", {"$ time is $time"}, function (results)
+when("5", {"$ time is $time"}, function (results)
     retract("#5 %")
     for index, result in ipairs(results) do
         claim("#5 I heard the time is "..results["time"])

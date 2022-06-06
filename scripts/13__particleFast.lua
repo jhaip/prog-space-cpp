@@ -4,7 +4,7 @@ for i = 0,200,1 do
 end
 claim("#13 particles "..p)
 
-register_when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
+when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
     retract("#13 %")
     for index, result in ipairs(results) do
         new_particles = ""

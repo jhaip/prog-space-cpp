@@ -239,20 +239,7 @@ class Database {
         return r;
     }
 
-    void when(std::vector<std::string> query_parts, sol::protected_function callback_func) {
-        if (debug)
-            std::cout << "When" << std::endl;
-        auto results = select(query_parts);
-        if (debug)
-            std::cout << "RESULTS:" << std::endl;
-        for (const auto &result : results) {
-            if (debug)
-                std::cout << "    " << result.toString() << std::endl;
-            callback_func(result.toLuaType());
-        }
-    }
-
-    void register_when(std::string source, std::vector<std::string> query_parts, sol::protected_function callback_func) {
+    void when(std::string source, std::vector<std::string> query_parts, sol::protected_function callback_func) {
         subscriptions.push_back(Subscription{source, query_parts, callback_func});
     }
 

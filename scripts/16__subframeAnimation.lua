@@ -1,6 +1,6 @@
 claim("#16 current frame is 0 at 0")
 
-register_when("16", {"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"}, function (results)
+when("16", {"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"}, function (results)
     retract("#16 subframe %")
     for index, result in ipairs(results) do
         local id = tonumber(result["id"])
@@ -24,7 +24,7 @@ register_when("16", {"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"}, functi
     end
 end)
 
-register_when("16", {"$ clock time is $time", "#16 current frame is $i at $frametime", "#16 subframe $i at $x1 $y1"}, function (results)
+when("16", {"$ clock time is $time", "#16 current frame is $i at $frametime", "#16 subframe $i at $x1 $y1"}, function (results)
     retract("#16 current frame %")
     retract("#16 wish %")
     if #results == 0 then

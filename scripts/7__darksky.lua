@@ -1,4 +1,4 @@
-register_when("7", {"$ time is $time"}, function (results)
+when("7", {"$ time is $time"}, function (results)
     retract("#7 %")
     for index, result in ipairs(results) do
         if tonumber(result["time"]) % 10 == 0 then

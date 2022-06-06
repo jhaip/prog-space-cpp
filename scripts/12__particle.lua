@@ -3,7 +3,7 @@ for i = 0,50,1 do
     claim("#12 particle "..i.." velocity is "..i*0.1.." 0.5")
 end
 
-register_when("12", {"$ particle $p at $x $y", "$ particle $p velocity is $vx $vy", "$ clock time is $t"}, function (result)
+when("12", {"$ particle $p at $x $y", "$ particle $p velocity is $vx $vy", "$ clock time is $t"}, function (result)
     retract("#12 %")
     for index, result in ipairs(results) do
         local new_x = tonumber(result["x"]) + tonumber(result["vx"])
