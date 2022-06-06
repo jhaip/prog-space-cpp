@@ -12,6 +12,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include "calibration.cpp"
 #include "db.cpp"
 #include "graphics.cpp"
 #include "http.cpp"
@@ -35,7 +36,6 @@ std::atomic_bool new_data_available{false};
 std::vector<int> seen_program_ids;
 std::vector<std::vector<cv::Point2f>> seen_program_corners;
 cv::Mat latestFrame;
-cv::Mat calibrationMatrix;
 
 // from https://github.com/ThePhD/sol2/issues/86
 sol::object jsonToLuaObject(const json &j, sol::state_view &lua) {
@@ -225,15 +225,8 @@ int main() {
     sf::Image latestFrameImage;
     sf::Texture latestFrameTexture;
     sf::Sprite latestFrameSprite;
-    // std::vector<std::pair<float, float>> calibration = {{226, 124}, {1442, 108}, {1458, 830}, {198, 810}}; // TL TR BR BL
-    std::vector<std::pair<float, float>> calibration = {{0, 0}, {1920, 0}, {1920, 1080}, {0, 1080}}; // TL TR BR BL
+    CalibrationManager calibrationManager{SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA_WIDTH, CAMERA_HEIGHT};
     int calibrationCorner = 0;
-    std::vector<cv::Point2f> projection_corrected_world_corners = {
-        cv::Point2f(0, 0),
-        cv::Point2f(SCREEN_WIDTH, 0),
-        cv::Point2f(SCREEN_WIDTH, SCREEN_HEIGHT),
-        cv::Point2f(0, SCREEN_HEIGHT)}; // TL TR BR BL
-    bool shouldRecalculate = true;
 
     sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "SFML works!");
     sf::RenderWindow debugWindow(sf::VideoMode(CAMERA_WIDTH, CAMERA_HEIGHT), "debug");
@@ -342,35 +335,6 @@ int main() {
                 }
             }
 
-            if (debugWindow.hasFocus()) {
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
-                    calibrationCorner = 0;
-                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
-                    calibrationCorner = 1;
-                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
-                    calibrationCorner = 2;
-                } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
-                    calibrationCorner = 3;
-                }
-
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-                    calibration[calibrationCorner].first += 2;
-                    shouldRecalculate = true;
-                }
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-                    calibration[calibrationCorner].first -= 2;
-                    shouldRecalculate = true;
-                }
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-                    calibration[calibrationCorner].second -= 2;
-                    shouldRecalculate = true;
-                }
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-                    calibration[calibrationCorner].second += 2;
-                    shouldRecalculate = true;
-                }
-            }
-
             db.claim("#0 fps is " + std::to_string((int)fps));
             db.claim("#0 clock time is " + std::to_string(loopCount));
             int index = 0;
@@ -384,73 +348,9 @@ int main() {
                          std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
                          std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
                          std::to_string(corner3.x) + " " + std::to_string(corner3.y));
-                // TODO probably move this
-                if (id == 990) {
-                    calibration[0].first = corner0.x;
-                    calibration[0].second = corner0.y;
-                    shouldRecalculate = true;
-                }
-                if (id == 991) {
-                    calibration[1].first = corner1.x;
-                    calibration[1].second = corner1.y;
-                    shouldRecalculate = true;
-                }
-                if (id == 992) {
-                    calibration[2].first = corner2.x;
-                    calibration[2].second = corner2.y;
-                    shouldRecalculate = true;
-                }
-                if (id == 993) {
-                    calibration[3].first = corner3.x;
-                    calibration[3].second = corner3.y;
-                    shouldRecalculate = true;
-                }
-
                 index += 1;
             }
             loopCount += 1;
-
-            if (shouldRecalculate) {
-                float size = 10;
-                std::vector<cv::Point2f> screen_vertices{
-                    cv::Point2f{0 + size, 0 + size},                                      // topLeft
-                    cv::Point2f{(float)SCREEN_WIDTH - size, 0 + size},                    // Top Right
-                    cv::Point2f{(float)SCREEN_WIDTH - size, (float)SCREEN_HEIGHT - size}, // bottomRight
-                    cv::Point2f{0 + size, (float)SCREEN_HEIGHT - size}                    // bottomLeft
-                };
-
-                std::vector<cv::Point2f> camera_vertices{
-                    cv::Point2f{0, 0},                                      // topLeft
-                    cv::Point2f{(float)CAMERA_WIDTH, 0},                    // Top Right
-                    cv::Point2f{(float)CAMERA_WIDTH, (float)CAMERA_HEIGHT}, // bottomRight
-                    cv::Point2f{0, (float)CAMERA_HEIGHT}                    // bottomLeft
-                };
-
-                std::vector<cv::Point2f> dst_vertices{
-                    cv::Point2f{calibration[0].first, calibration[0].second},
-                    cv::Point2f{calibration[1].first, calibration[1].second},
-                    cv::Point2f{calibration[2].first, calibration[2].second},
-                    cv::Point2f{calibration[3].first, calibration[3].second}};
-
-                calibrationMatrix = getPerspectiveTransform(dst_vertices, screen_vertices);
-                std::cout << "cal matrix: " << calibrationMatrix << std::endl;
-
-                perspectiveTransform(camera_vertices, projection_corrected_world_corners, calibrationMatrix);
-
-                std::cout << projection_corrected_world_corners[0] << std::endl;
-                std::cout << projection_corrected_world_corners[1] << std::endl;
-                std::cout << projection_corrected_world_corners[2] << std::endl;
-                std::cout << projection_corrected_world_corners[3] << std::endl;
-
-                std::cout << "calibration:" << std::endl;
-                std::cout << calibration[0].first << " " << calibration[0].second << std::endl;
-                std::cout << calibration[1].first << " " << calibration[1].second << std::endl;
-                std::cout << calibration[2].first << " " << calibration[2].second << std::endl;
-                std::cout << calibration[3].first << " " << calibration[3].second << std::endl;
-                std::cout << "---" << std::endl;
-
-                shouldRecalculate = false;
-            }
 
             for (auto &id : programsThatDied) {
                 std::cout << id << " died." << std::endl;
@@ -513,12 +413,44 @@ int main() {
             genericGraphicsWishes = db.select({"$source wish $target had graphics $graphics"});
         }
 
+        if (debugWindow.hasFocus()) {
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
+                calibrationCorner = 0;
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
+                calibrationCorner = 1;
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
+                calibrationCorner = 2;
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
+                calibrationCorner = 3;
+            }
+
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+                calibrationManager.calibration[calibrationCorner].first += 2;
+                calibrationManager.recalculate();
+            }
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+                calibrationManager.calibration[calibrationCorner].first -= 2;
+                calibrationManager.recalculate();
+            }
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+                calibrationManager.calibration[calibrationCorner].second -= 2;
+                calibrationManager.recalculate();
+            }
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+                calibrationManager.calibration[calibrationCorner].second += 2;
+                calibrationManager.recalculate();
+            }
+        }
+
+        calibrationManager.checkForArucoCalibration(main_seen_program_ids,
+                                                    main_seen_program_corners);
+
         window.clear(sf::Color(0, 0, 255, 255));
         graphicsManager.draw_graphics(window,
                                       genericGraphicsWishes,
                                       main_seen_program_ids,
                                       main_seen_program_corners,
-                                      projection_corrected_world_corners,
+                                      calibrationManager.projection_corrected_world_corners,
                                       latestFrameTexture);
 
         window.display();
@@ -527,7 +459,7 @@ int main() {
         debugWindow.draw(latestFrameSprite);
         int cornerIndex = 0;
         sf::VertexArray verticesOfCalibration(sf::LinesStrip, 5);
-        for (const auto &corner : calibration) {
+        for (const auto &corner : calibrationManager.calibration) {
             sf::CircleShape circle(10);
             circle.setPosition(sf::Vector2f(corner.first - 10.f, corner.second - 10.f));
             if (cornerIndex == calibrationCorner) {
