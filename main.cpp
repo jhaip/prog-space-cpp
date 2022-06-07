@@ -1,12 +1,8 @@
 #define SOL_ALL_SAFETIES_ON 1
-#include <SFML/Graphics.hpp>
-#include <sol/sol.hpp>
-// #include "SelbaWard/Sprite3d.cpp"
 #include <future>
 #include <iostream>
 #include <map>
 #include <math.h>
-#include <nlohmann/json.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -15,6 +11,7 @@
 #include "db.cpp"
 #include "graphics.cpp"
 #include "http.cpp"
+#include "sourcecode.cpp"
 
 // hack moving the definition before importing httpserver.cpp
 // because httpserver.cpp depends on it as a global variable
@@ -30,99 +27,14 @@ cv::Mat latestFrame;
 #include "httpserver.cpp"
 #include "vision.cpp"
 
-using namespace Poco::Net;
-
-using nlohmann::json;
-
 using namespace std::chrono;
 using namespace cv;
-
-std::string read_file(std::string filepath) {
-    std::ifstream t(filepath);
-    std::stringstream buffer;
-    buffer << t.rdbuf();
-    return buffer.str();
-}
-
-void write_to_file(std::string filepath, std::string contents) {
-    std::ofstream out(filepath, std::ofstream::trunc); // override file contents
-    out << contents;
-    out.close();
-}
 
 int main() {
     auto r = std::async(std::launch::async, cvLoop);
     // fakeCvLoop();
 
     Database db{};
-
-    sol::state lua;
-
-    // open those basic lua libraries
-    // again, for print() and other basic utilities
-    lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::coroutine, sol::lib::string, sol::lib::io, sol::lib::os);
-
-    Illumination::add_illumination_usertype_to_lua(lua);
-
-    lua.set_function("claim", [&db](sol::variadic_args va) {
-        std::vector<Term> terms;
-        for (auto v : va) {
-            sol::optional<sol::table> table = v;
-            if (table != sol::nullopt) {
-                auto tableVal = table.value();
-                terms.push_back(Term{tableVal[1], tableVal[2]});
-            } else {
-                std::string s = v;
-                auto subfact = Fact{s};
-                for (const auto &t : subfact.terms) {
-                    terms.push_back(t);
-                }
-            }
-        }
-        db.claim(Fact{terms});
-    });
-    lua.set_function("cleanup", &Database::cleanup, &db);
-    lua.set_function("retract", &Database::retract, &db);
-    lua.set_function("when", &Database::when, &db);
-    lua.set_function("remove_subs", &Database::remove_subs, &db);
-    lua.set_function("http_request", http_request);
-
-    std::vector<std::string> scriptPaths = {
-        "", // 0
-        "../../scripts/1__foxisred.lua",
-        "../../scripts/2__isananimal.lua",
-        "../../scripts/3__timeis.lua",
-        "../../scripts/4__whensomeoneisafox.lua",
-        "../../scripts/5__whentime.lua",
-        "../../scripts/6__youisafox.lua",
-        "../../scripts/7__darksky.lua",
-        "", // 8
-        "../../scripts/9__animation.lua",
-        "../../scripts/10__outlinePrograms.lua",
-        "../../scripts/11__counting.lua",
-        "../../scripts/12__particle.lua",
-        "../../scripts/13__particleFast.lua",
-        "../../scripts/14__showWeather.lua",
-        "../../scripts/15__drawFrame.lua",
-        "../../scripts/16__subframeAnimation.lua",
-        "../../scripts/17__textEditor.lua",
-        "../../scripts/18__controlLights.lua",
-        "../../scripts/19__controlLights2.lua",
-        "../../scripts/20__calibration.lua",
-        "../../scripts/21__showFps.lua"};
-
-    std::vector<std::string> scriptsSourceCodes(scriptPaths.size());
-
-    int scriptPathIndex = 0;
-    for (const auto &scriptPath : scriptPaths) {
-        if (scriptPath.length() > 0) {
-            auto sourceCode = read_file(scriptPath);
-            scriptsSourceCodes[scriptPathIndex] = sourceCode;
-            std::scoped_lock guard(dbMutex);
-            db.claim(Fact{{Term{"#00"}, Term{std::to_string(scriptPathIndex)}, Term{"source"}, Term{"code"}, Term{"", sourceCode}}});
-        }
-        scriptPathIndex++;
-    }
 
     int SCREEN_WIDTH = 1920;
     int SCREEN_HEIGHT = 1080;
@@ -139,6 +51,29 @@ int main() {
     DebugWindowManager debugWindowManager{CAMERA_WIDTH, CAMERA_HEIGHT};
     GraphicsManager graphicsManager{SCREEN_WIDTH, SCREEN_HEIGHT};
     graphicsManager.init();
+    SourceCodeManager sourceCodeManager({"", // 0
+                                         "../../scripts/1__foxisred.lua",
+                                         "../../scripts/2__isananimal.lua",
+                                         "../../scripts/3__timeis.lua",
+                                         "../../scripts/4__whensomeoneisafox.lua",
+                                         "../../scripts/5__whentime.lua",
+                                         "../../scripts/6__youisafox.lua",
+                                         "../../scripts/7__darksky.lua",
+                                         "", // 8
+                                         "../../scripts/9__animation.lua",
+                                         "../../scripts/10__outlinePrograms.lua",
+                                         "../../scripts/11__counting.lua",
+                                         "../../scripts/12__particle.lua",
+                                         "../../scripts/13__particleFast.lua",
+                                         "../../scripts/14__showWeather.lua",
+                                         "../../scripts/15__drawFrame.lua",
+                                         "../../scripts/16__subframeAnimation.lua",
+                                         "../../scripts/17__textEditor.lua",
+                                         "../../scripts/18__controlLights.lua",
+                                         "../../scripts/19__controlLights2.lua",
+                                         "../../scripts/20__calibration.lua",
+                                         "../../scripts/21__showFps.lua"});
+    sourceCodeManager.init(db);
 
     HTTPServer httpServerInstance(new MyRequestHandlerFactory{db}, ServerSocket(9090), new HTTPServerParams);
     httpServerInstance.start();
@@ -176,6 +111,22 @@ int main() {
                 }
                 main_seen_program_ids = seen_program_ids;
                 main_seen_program_corners = seen_program_corners;
+
+                int index = 0;
+                for (auto &id : main_seen_program_ids) {
+                    cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
+                    cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
+                    cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
+                    cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
+                    db.claim("#0 program " + std::to_string(id) + " at " +
+                             std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
+                             std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
+                             std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
+                             std::to_string(corner3.x) + " " + std::to_string(corner3.y));
+                    index += 1;
+                }
+                loopCount += 1;
+
                 if (!latestFrame.empty()) {
                     cv::cvtColor(latestFrame, main_latestFrame, cv::COLOR_BGR2RGBA);
                 }
@@ -235,76 +186,8 @@ int main() {
 
             db.claim("#0 fps is " + std::to_string((int)fps));
             db.claim("#0 clock time is " + std::to_string(loopCount));
-            int index = 0;
-            for (auto &id : main_seen_program_ids) {
-                cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
-                cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
-                cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
-                cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
-                db.claim("#0 program " + std::to_string(id) + " at " +
-                         std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
-                         std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +
-                         std::to_string(corner2.x) + " " + std::to_string(corner2.y) + " " +
-                         std::to_string(corner3.x) + " " + std::to_string(corner3.y));
-                index += 1;
-            }
-            loopCount += 1;
 
-            for (auto &id : programsThatDied) {
-                std::cout << id << " died." << std::endl;
-                if (id >= scriptsSourceCodes.size()) {
-                    continue;
-                }
-                db.cleanup(std::to_string(id));
-            }
-            for (auto &id : newlySeenPrograms) {
-                std::cout << "running " << id << std::endl;
-                if (id >= scriptsSourceCodes.size()) {
-                    continue;
-                }
-                try {
-                    auto result = lua.safe_script(scriptsSourceCodes[id], sol::script_pass_on_error);
-                    if (!result.valid()) {
-                        sol::error err = result;
-                        std::cerr << "The code has failed to run!\n"
-                                  << err.what() << "\nPanicking and exiting..."
-                                  << std::endl;
-                    }
-                } catch (const std::exception &e) {
-                    std::cout << "Exception when running program " << id << ": " << e.what() << std::endl;
-                }
-            }
-
-            auto results = db.select({"$ wish $programId source code is $code"});
-            if (results.size() > 0) {
-                for (const auto &result : results) {
-                    Term programIdTerm{"", ""};
-                    Term sourceCodeTerm{"", ""};
-                    for (const auto &resultVariable : result.Result) {
-                        if (resultVariable.first == "programId") {
-                            programIdTerm = resultVariable.second;
-                        } else if (resultVariable.first == "code") {
-                            sourceCodeTerm = resultVariable.second;
-                        }
-                    }
-                    int programId = stoi(programIdTerm.value);
-                    db.retract("$ " + programIdTerm.value + " source code $");
-                    db.claim(Fact{{Term{"#00"}, programIdTerm, Term{"source"}, Term{"code"}, sourceCodeTerm}});
-                    db.cleanup(programIdTerm.value);
-                    scriptsSourceCodes[programId] = sourceCodeTerm.value;
-                    if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), programId) != main_seen_program_ids.end()) {
-                        auto result = lua.safe_script(sourceCodeTerm.value, sol::script_pass_on_error);
-                        if (!result.valid()) {
-                            sol::error err = result;
-                            std::cerr << "The code has failed to run!\n"
-                                      << err.what() << "\nPanicking and exiting..."
-                                      << std::endl;
-                        }
-                    }
-                    write_to_file(scriptPaths[programId], sourceCodeTerm.value);
-                }
-                db.retract("$ wish $ source code is $");
-            }
+            sourceCodeManager.update(db, programsThatDied, newlySeenPrograms);
 
             db.run_subscriptions();
 
