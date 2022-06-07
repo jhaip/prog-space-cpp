@@ -7,7 +7,6 @@
 #include <map>
 #include <math.h>
 #include <nlohmann/json.hpp>
-#include <opencv2/aruco.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -20,8 +19,15 @@
 // hack moving the definition before importing httpserver.cpp
 // because httpserver.cpp depends on it as a global variable
 std::mutex dbMutex;
+std::mutex myMutex;
+std::atomic_bool stop_cv_thread{false};
+std::atomic_bool new_data_available{false};
+std::vector<int> seen_program_ids;
+std::vector<std::vector<cv::Point2f>> seen_program_corners;
+cv::Mat latestFrame;
 
 #include "httpserver.cpp"
+#include "vision.cpp"
 
 using namespace Poco::Net;
 
@@ -29,13 +35,6 @@ using nlohmann::json;
 
 using namespace std::chrono;
 using namespace cv;
-
-std::atomic_bool stop_cv_thread{false};
-std::mutex myMutex;
-std::atomic_bool new_data_available{false};
-std::vector<int> seen_program_ids;
-std::vector<std::vector<cv::Point2f>> seen_program_corners;
-cv::Mat latestFrame;
 
 // from https://github.com/ThePhD/sol2/issues/86
 sol::object jsonToLuaObject(const json &j, sol::state_view &lua) {
@@ -77,54 +76,6 @@ void http_request_thread(std::vector<std::string> query_parts, sol::protected_fu
 void http_request(std::vector<std::string> query_parts, sol::protected_function callback_func, sol::this_state ts) {
     std::cout << "making http request" << std::endl;
     std::thread{http_request_thread, query_parts, callback_func, ts}.detach();
-}
-
-void my_query(std::string a, sol::protected_function f) {
-    std::string result1 = a; // lua.create_table_with(a, "50");
-    std::vector<std::string> results = {result1};
-    for (auto &result : results) {
-        f(result);
-    }
-}
-
-void cvLoop() {
-    VideoCapture inputVideo;
-    inputVideo.open(0);
-    cv::Mat cameraMatrix;
-    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_1000);
-    while (!stop_cv_thread && inputVideo.grab()) {
-        cv::Mat image, imageCopy;
-        inputVideo.retrieve(image);
-        image.copyTo(imageCopy);
-        // std::cout << "width: " << imageCopy.cols << " height: " << imageCopy.rows << std::endl;
-        std::vector<int> ids;
-        std::vector<std::vector<cv::Point2f>> corners;
-        cv::aruco::detectMarkers(image, dictionary, corners, ids);
-        if (ids.size() > 0) {
-            cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
-            // std::cout << "Seen ID" << ids[0] << std::endl;
-        }
-        {
-            std::scoped_lock guard(myMutex);
-            seen_program_ids = ids;
-            seen_program_corners = corners;
-            imageCopy.copyTo(latestFrame);
-            new_data_available = true;
-        }
-    }
-    std::cout << "cv thread died" << std::endl;
-}
-
-void fakeCvLoop() {
-    std::scoped_lock guard(myMutex);
-    std::vector<int> my_seen_program_ids{17, 3, 21};
-    std::vector<std::vector<cv::Point2f>> my_seen_program_corners{
-        {cv::Point2f{0, 50}, cv::Point2f{1, 50}, cv::Point2f{1, 51}, cv::Point2f{0, 51}},
-        {cv::Point2f{0, 0}, cv::Point2f{1, 0}, cv::Point2f{1, 1}, cv::Point2f{0, 1}},
-        {cv::Point2f{0, 300}, cv::Point2f{1, 300}, cv::Point2f{1, 301}, cv::Point2f{0, 301}}};
-    seen_program_ids = my_seen_program_ids;
-    seen_program_corners = my_seen_program_corners;
-    new_data_available = true;
 }
 
 std::string read_file(std::string filepath) {
