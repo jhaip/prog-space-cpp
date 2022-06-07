@@ -26,6 +26,7 @@ std::vector<int> seen_program_ids;
 std::vector<std::vector<cv::Point2f>> seen_program_corners;
 cv::Mat latestFrame;
 
+#include "debugwindow.cpp"
 #include "httpserver.cpp"
 #include "vision.cpp"
 
@@ -135,16 +136,14 @@ int main() {
     sf::Texture latestFrameTexture;
     sf::Sprite latestFrameSprite;
     CalibrationManager calibrationManager{SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA_WIDTH, CAMERA_HEIGHT};
-    int calibrationCorner = 0;
-
-    sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "SFML works!");
-    sf::RenderWindow debugWindow(sf::VideoMode(CAMERA_WIDTH, CAMERA_HEIGHT), "debug");
-
+    DebugWindowManager debugWindowManager{CAMERA_WIDTH, CAMERA_HEIGHT};
     GraphicsManager graphicsManager{SCREEN_WIDTH, SCREEN_HEIGHT};
     graphicsManager.init();
 
     HTTPServer httpServerInstance(new MyRequestHandlerFactory{db}, ServerSocket(9090), new HTTPServerParams);
     httpServerInstance.start();
+
+    sf::RenderWindow window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "SFML works!");
 
     float fps;
     sf::Clock clock;
@@ -153,7 +152,7 @@ int main() {
 
     int loopCount = 0;
     window.setFramerateLimit(60);
-    while (window.isOpen() && debugWindow.isOpen()) {
+    while (window.isOpen() && debugWindowManager.debugWindow.isOpen()) {
         currentTime = clock.getElapsedTime();
         fps = 1.0f / (currentTime.asSeconds() - previousTime.asSeconds()); // the asSeconds returns a float
         // std::cout << "fps =" << floor(fps) << std::endl; // flooring it will make the frame rate a rounded number
@@ -230,16 +229,6 @@ int main() {
                         db.claim(Fact{{Term{"#0"}, Term{"keyboard"}, Term{"typed"}, Term{"key"}, Term{"", c}}});
                     } else {
                         std::cout << "unhandled key press unicode " << event.text.unicode << std::endl;
-                    }
-                }
-            }
-            while (debugWindow.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) {
-                    debugWindow.close();
-                } else if (event.type == sf::Event::KeyPressed) {
-                    if (event.key.code == sf::Keyboard::Enter) {
-                        std::cout << "Debug Enter pressed" << std::endl;
-                        db.print();
                     }
                 }
             }
@@ -322,35 +311,6 @@ int main() {
             genericGraphicsWishes = db.select({"$source wish $target had graphics $graphics"});
         }
 
-        if (debugWindow.hasFocus()) {
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) {
-                calibrationCorner = 0;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
-                calibrationCorner = 1;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) {
-                calibrationCorner = 2;
-            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
-                calibrationCorner = 3;
-            }
-
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-                calibrationManager.calibration[calibrationCorner].first += 2;
-                calibrationManager.recalculate();
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-                calibrationManager.calibration[calibrationCorner].first -= 2;
-                calibrationManager.recalculate();
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-                calibrationManager.calibration[calibrationCorner].second -= 2;
-                calibrationManager.recalculate();
-            }
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-                calibrationManager.calibration[calibrationCorner].second += 2;
-                calibrationManager.recalculate();
-            }
-        }
-
         calibrationManager.checkForArucoCalibration(main_seen_program_ids,
                                                     main_seen_program_corners);
 
@@ -364,26 +324,8 @@ int main() {
 
         window.display();
 
-        debugWindow.clear();
-        debugWindow.draw(latestFrameSprite);
-        int cornerIndex = 0;
-        sf::VertexArray verticesOfCalibration(sf::LinesStrip, 5);
-        for (const auto &corner : calibrationManager.calibration) {
-            sf::CircleShape circle(10);
-            circle.setPosition(sf::Vector2f(corner.first - 10.f, corner.second - 10.f));
-            if (cornerIndex == calibrationCorner) {
-                circle.setFillColor(sf::Color(255, 255, 0));
-            } else {
-                circle.setFillColor(sf::Color(0, 255, 0));
-            }
-            verticesOfCalibration[cornerIndex].position = sf::Vector2f(corner.first, corner.second);
-            verticesOfCalibration[cornerIndex].color = sf::Color::Green;
-            debugWindow.draw(circle);
-            cornerIndex++;
-        }
-        verticesOfCalibration[4] = verticesOfCalibration[0];
-        debugWindow.draw(verticesOfCalibration);
-        debugWindow.display();
+        debugWindowManager.update(calibrationManager, db);
+        debugWindowManager.draw(latestFrameSprite, calibrationManager.calibration);
     }
 
     std::cout << "stopping http server" << std::endl;
