@@ -24,9 +24,26 @@ class CalibrationManager {
             cv::Point2f(0, SCREEN_HEIGHT)}; // TL TR BR BL
     }
 
-    void checkForArucoCalibration(Database &db) {
-        auto seenProgramResults = db.select({"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"});
+    void update(Database &db) {
         bool shouldRecalculate = false;
+
+        auto calibrationWishResults = db.select({"$source wish calibration is $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"});
+        if (calibrationWishResults.size() > 0) {
+            auto r = calibrationWishResults[0];
+            calibration[0].first = std::stof(r.get("x1").value);
+            calibration[0].second = std::stof(r.get("y1").value);
+            calibration[1].first = std::stof(r.get("x2").value);
+            calibration[1].second = std::stof(r.get("y2").value);
+            calibration[2].first = std::stof(r.get("x3").value);
+            calibration[2].second = std::stof(r.get("y3").value);
+            calibration[3].first = std::stof(r.get("x4").value);
+            calibration[3].second = std::stof(r.get("y4").value);
+            shouldRecalculate = true;
+            db.retract("#" + r.get("source").value + " wish calibration is $ $ $ $ $ $ $ $");
+        }
+
+        auto seenProgramResults = db.select({"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"});
+
         for (const auto &seenProgramResult : seenProgramResults) {
             auto id = std::stoi(seenProgramResult.get("id").value);
             if (id == 990) {

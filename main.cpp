@@ -48,7 +48,7 @@ int main() {
     sf::Texture latestFrameTexture;
     sf::Sprite latestFrameSprite;
     CalibrationManager calibrationManager{SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA_WIDTH, CAMERA_HEIGHT};
-    DebugWindowManager debugWindowManager{CAMERA_WIDTH, CAMERA_HEIGHT};
+    DebugWindowManager debugWindowManager{SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA_WIDTH, CAMERA_HEIGHT};
     GraphicsManager graphicsManager{SCREEN_WIDTH, SCREEN_HEIGHT};
     graphicsManager.init();
     SourceCodeManager sourceCodeManager({"", // 0
@@ -145,18 +145,12 @@ int main() {
             db.claim("#0 fps is " + std::to_string((int)fps));
             db.claim("#0 clock time is " + std::to_string(loopCount));
             loopCount += 1;
-
             sourceCodeManager.update(db, programsThatDied, newlySeenPrograms);
+            calibrationManager.update(db);
+            graphicsManager.update(db, latestFrameTexture);
+            debugWindowManager.update(db, latestFrameSprite);
 
             db.run_subscriptions();
-
-            calibrationManager.checkForArucoCalibration(db);
-
-            graphicsManager.update(db, latestFrameTexture);
-
-            // TOOD: remove dependency on calibrationManager by querying db
-            debugWindowManager.update(calibrationManager, db);
-            debugWindowManager.draw(latestFrameSprite, calibrationManager.calibration);
         }
 
         sf::sleep(sf::seconds(1 / 60.0f) - sf::seconds(clock.getElapsedTime().asSeconds() - currentTime.asSeconds()));
