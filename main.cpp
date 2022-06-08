@@ -46,7 +46,6 @@ int main() {
     cv::Mat main_latestFrame;
     sf::Image latestFrameImage;
     sf::Texture latestFrameTexture;
-    sf::Sprite latestFrameSprite;
     CalibrationManager calibrationManager{SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA_WIDTH, CAMERA_HEIGHT};
     DebugWindowManager debugWindowManager{SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA_WIDTH, CAMERA_HEIGHT};
     GraphicsManager graphicsManager{SCREEN_WIDTH, SCREEN_HEIGHT};
@@ -132,9 +131,7 @@ int main() {
                     cv::cvtColor(latestFrame, main_latestFrame, cv::COLOR_BGR2RGBA);
                 }
                 latestFrameImage.create(main_latestFrame.cols, main_latestFrame.rows, main_latestFrame.ptr());
-                if (latestFrameTexture.loadFromImage(latestFrameImage)) {
-                    latestFrameSprite.setTexture(latestFrameTexture);
-                }
+                latestFrameTexture.loadFromImage(latestFrameImage);
                 // std::cout << "NEW DATA!" << std::endl;
             }
         }
@@ -148,7 +145,7 @@ int main() {
             sourceCodeManager.update(db, programsThatDied, newlySeenPrograms);
             calibrationManager.update(db);
             graphicsManager.update(db, latestFrameTexture);
-            debugWindowManager.update(db, latestFrameSprite);
+            debugWindowManager.update(db, latestFrameTexture);
 
             db.run_subscriptions();
         }

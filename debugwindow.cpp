@@ -8,7 +8,7 @@ class DebugWindowManager {
     DebugWindowManager(int _SCREEN_WIDTH, int _SCREEN_HEIGHT, int CAMERA_WIDTH, int CAMERA_HEIGHT) : SCREEN_WIDTH(_SCREEN_WIDTH), SCREEN_HEIGHT(_SCREEN_HEIGHT),
                                                                                                      debugWindow(sf::VideoMode(CAMERA_WIDTH, CAMERA_HEIGHT), "debug") {}
 
-    void update(Database &db, sf::Sprite &latestFrameSprite) {
+    void update(Database &db, sf::Texture &latestFrameTexture) {
         auto calibrationResults = db.select({"$ calibration points $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"});
         std::vector<std::pair<float, float>> calibration = {
             {0, 0},
@@ -76,6 +76,8 @@ class DebugWindowManager {
         }
 
         debugWindow.clear();
+        sf::Sprite latestFrameSprite;
+        latestFrameSprite.setTexture(latestFrameTexture);
         debugWindow.draw(latestFrameSprite);
         int cornerIndex = 0;
         sf::VertexArray verticesOfCalibration(sf::LinesStrip, 5);
