@@ -13,10 +13,7 @@ class DebugWindowManager {
             } else if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::Enter) {
                     std::cout << "Debug Enter pressed" << std::endl;
-                    {
-                        std::scoped_lock guard(dbMutex);
-                        db.print();
-                    }
+                    db.print();
                 }
             }
         }
@@ -33,19 +30,19 @@ class DebugWindowManager {
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
                 calibrationManager.calibration[calibrationCorner].first += 2;
-                calibrationManager.recalculate();
+                calibrationManager.recalculate(db);
             }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
                 calibrationManager.calibration[calibrationCorner].first -= 2;
-                calibrationManager.recalculate();
+                calibrationManager.recalculate(db);
             }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
                 calibrationManager.calibration[calibrationCorner].second -= 2;
-                calibrationManager.recalculate();
+                calibrationManager.recalculate(db);
             }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
                 calibrationManager.calibration[calibrationCorner].second += 2;
-                calibrationManager.recalculate();
+                calibrationManager.recalculate(db);
             }
         }
     }

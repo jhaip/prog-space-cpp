@@ -24,34 +24,38 @@ class CalibrationManager {
             cv::Point2f(0, SCREEN_HEIGHT)}; // TL TR BR BL
     }
 
-    void checkForArucoCalibration(std::vector<int> &main_seen_program_ids, std::vector<std::vector<cv::Point2f>> &main_seen_program_corners) {
-        int index = 0;
-        for (auto &id : main_seen_program_ids) {
-            cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
-            cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
-            cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
-            cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
+    void checkForArucoCalibration(Database &db) {
+        auto seenProgramResults = db.select({"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"});
+        bool shouldRecalculate = false;
+        for (const auto &seenProgramResult : seenProgramResults) {
+            auto id = std::stoi(seenProgramResult.get("id").value);
             if (id == 990) {
-                calibration[0].first = corner0.x;
-                calibration[0].second = corner0.y;
+                calibration[0].first = std::stoi(seenProgramResult.get("x1").value);
+                calibration[0].second = std::stoi(seenProgramResult.get("y1").value);
+                shouldRecalculate = true;
             }
             if (id == 991) {
-                calibration[1].first = corner1.x;
-                calibration[1].second = corner1.y;
+                calibration[1].first = std::stoi(seenProgramResult.get("x2").value);
+                calibration[1].second = std::stoi(seenProgramResult.get("y2").value);
+                shouldRecalculate = true;
             }
             if (id == 992) {
-                calibration[2].first = corner2.x;
-                calibration[2].second = corner2.y;
+                calibration[2].first = std::stoi(seenProgramResult.get("x3").value);
+                calibration[2].second = std::stoi(seenProgramResult.get("y3").value);
+                shouldRecalculate = true;
             }
             if (id == 993) {
-                calibration[3].first = corner3.x;
-                calibration[3].second = corner3.y;
+                calibration[3].first = std::stoi(seenProgramResult.get("x4").value);
+                calibration[3].second = std::stoi(seenProgramResult.get("y4").value);
+                shouldRecalculate = true;
             }
-            index += 1;
+        }
+        if (shouldRecalculate) {
+            recalculate(db);
         }
     }
 
-    void recalculate() {
+    void recalculate(Database &db) {
         float size = 10;
         std::vector<cv::Point2f> screen_vertices{
             cv::Point2f{0 + size, 0 + size},                                      // topLeft
@@ -89,5 +93,17 @@ class CalibrationManager {
         std::cout << calibration[2].first << " " << calibration[2].second << std::endl;
         std::cout << calibration[3].first << " " << calibration[3].second << std::endl;
         std::cout << "---" << std::endl;
+
+        db.remove_claims_from_source("09");
+        db.claim(Fact{{Term{"#09"}, Term{"calibration"}, Term{"points"},
+                       Term{"", std::to_string(calibration[0].first)}, Term{"", std::to_string(calibration[0].second)},
+                       Term{"", std::to_string(calibration[1].first)}, Term{"", std::to_string(calibration[1].second)},
+                       Term{"", std::to_string(calibration[2].first)}, Term{"", std::to_string(calibration[2].second)},
+                       Term{"", std::to_string(calibration[3].first)}, Term{"", std::to_string(calibration[3].second)}}});
+        db.claim(Fact{{Term{"#09"}, Term{"calibration"}, Term{"projected"}, Term{"corners"},
+                       Term{"", std::to_string(projection_corrected_world_corners[0].x)}, Term{"", std::to_string(projection_corrected_world_corners[0].y)},
+                       Term{"", std::to_string(projection_corrected_world_corners[1].x)}, Term{"", std::to_string(projection_corrected_world_corners[1].y)},
+                       Term{"", std::to_string(projection_corrected_world_corners[2].x)}, Term{"", std::to_string(projection_corrected_world_corners[2].y)},
+                       Term{"", std::to_string(projection_corrected_world_corners[3].x)}, Term{"", std::to_string(projection_corrected_world_corners[3].y)}}});
     }
 };

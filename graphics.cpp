@@ -117,9 +117,11 @@ class GraphicsManager {
     sf::RenderTexture topRenderTexture;
     int SCREEN_WIDTH;
     int SCREEN_HEIGHT;
+    sf::RenderWindow window;
 
   public:
-    GraphicsManager(int _SCREEN_WIDTH, int _SCREEN_HEIGHT) : SCREEN_WIDTH(_SCREEN_WIDTH), SCREEN_HEIGHT(_SCREEN_HEIGHT) {}
+    GraphicsManager(int _SCREEN_WIDTH, int _SCREEN_HEIGHT) : SCREEN_WIDTH(_SCREEN_WIDTH), SCREEN_HEIGHT(_SCREEN_HEIGHT),
+                                                             window(sf::VideoMode(_SCREEN_WIDTH, _SCREEN_HEIGHT), "main") {}
 
     void init() {
         if (!font.loadFromFile("Inconsolata-Regular.ttf")) {
@@ -133,12 +135,76 @@ class GraphicsManager {
         }
     }
 
-    void draw_graphics(sf::RenderWindow &window,
-                       std::vector<QueryResult> &genericGraphicsWishes,
-                       std::vector<int> &main_seen_program_ids,
-                       std::vector<std::vector<cv::Point2f>> &main_seen_program_corners,
-                       std::vector<cv::Point2f> &projection_corrected_world_corners,
+    void update(Database &db,
+                sf::Texture &latestFrameTexture) {
+        handle_keyboard_and_window_events(db);
+        draw_graphics(db, latestFrameTexture);
+    }
+
+    void handle_keyboard_and_window_events(Database &db) {
+        db.remove_claims_from_source("0key");
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            } else if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Enter) {
+                    db.claim(Fact{"#0key keyboard typed key ENTER"});
+                } else if (event.key.code == sf::Keyboard::Backspace) {
+                    db.claim(Fact{"#0key keyboard typed key BACKSPACE"});
+                } else if (event.key.code == sf::Keyboard::Space) {
+                    db.claim(Fact{"#0key keyboard typed key SPACE"});
+                } else if (event.key.code == sf::Keyboard::Tab) {
+                    db.claim(Fact{"#0key keyboard typed key TAB"});
+                } else if (event.key.code == sf::Keyboard::Right) {
+                    db.claim(Fact{"#0key keyboard typed key RIGHT"});
+                } else if (event.key.code == sf::Keyboard::Left) {
+                    db.claim(Fact{"#0key keyboard typed key LEFT"});
+                } else if (event.key.code == sf::Keyboard::Up) {
+                    db.claim(Fact{"#0key keyboard typed key UP"});
+                } else if (event.key.code == sf::Keyboard::Down) {
+                    db.claim(Fact{"#0key keyboard typed key DOWN"});
+                } else if (event.key.control) {
+                    if (event.key.code == sf::Keyboard::P) {
+                        db.claim(Fact{"#0key keyboard typed key CONTROL-p"});
+                    } else if (event.key.code == sf::Keyboard::S) {
+                        db.claim(Fact{"#0key keyboard typed key CONTROL-s"});
+                    }
+                }
+            } else if (event.type == sf::Event::TextEntered) {
+                if (event.text.unicode > 31 && event.text.unicode < 127) {
+                    sf::String c = event.text.unicode;
+                    db.claim(Fact{{Term{"#0key"}, Term{"keyboard"}, Term{"typed"}, Term{"key"}, Term{"", c}}});
+                } else {
+                    std::cout << "unhandled key press unicode " << event.text.unicode << std::endl;
+                }
+            }
+        }
+    }
+
+    void draw_graphics(Database &db,
                        sf::Texture &latestFrameTexture) {
+        auto genericGraphicsWishes = db.select({"$source wish $target had graphics $graphics"});
+        auto seenProgramResults = db.select({"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"});
+        auto projectedWorldCornersResults = db.select({"$ calibration projected corners $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"});
+        std::vector<cv::Point2f> projection_corrected_world_corners = {
+            cv::Point2f(0, 0),
+            cv::Point2f(SCREEN_WIDTH, 0),
+            cv::Point2f(SCREEN_WIDTH, SCREEN_HEIGHT),
+            cv::Point2f(0, SCREEN_HEIGHT)}; // TL TR BR BL
+        if (projectedWorldCornersResults.size() > 0) {
+            auto r = projectedWorldCornersResults[0];
+            projection_corrected_world_corners[0].x = std::stof(r.get("x1").value);
+            projection_corrected_world_corners[0].y = std::stof(r.get("y1").value);
+            projection_corrected_world_corners[1].x = std::stof(r.get("x2").value);
+            projection_corrected_world_corners[1].y = std::stof(r.get("y2").value);
+            projection_corrected_world_corners[2].x = std::stof(r.get("x3").value);
+            projection_corrected_world_corners[2].y = std::stof(r.get("y3").value);
+            projection_corrected_world_corners[3].x = std::stof(r.get("x4").value);
+            projection_corrected_world_corners[3].y = std::stof(r.get("y4").value);
+        }
+
+        window.clear(sf::Color(0, 0, 255, 255));
         renderTexture.clear();
         topRenderTexture.clear(sf::Color::Transparent);
         for (const auto &wish : genericGraphicsWishes) {
@@ -156,16 +222,17 @@ class GraphicsManager {
             sf::Transform programTransform;
             sf::RenderTexture *textureTarget = &topRenderTexture;
             if (targetStr == "you") {
-                int main_seen_program_ids_index = 0;
-                for (auto &id : main_seen_program_ids) {
+                for (const auto &seenProgramResult : seenProgramResults) {
+                    auto id = std::stoi(seenProgramResult.get("id").value);
                     if (id == source) {
-                        cv::Point2f corner0 = main_seen_program_corners.at(main_seen_program_ids_index).at(0);
-                        cv::Point2f corner1 = main_seen_program_corners.at(main_seen_program_ids_index).at(1);
-                        programTransform.translate(corner0.x, corner0.y);
-                        auto angleDegrees = atan2(corner1.y - corner0.y, corner1.x - corner0.x) * 180 / 3.14159265;
+                        auto x1 = std::stoi(seenProgramResult.get("x1").value);
+                        auto y1 = std::stoi(seenProgramResult.get("y1").value);
+                        auto x2 = std::stoi(seenProgramResult.get("x2").value);
+                        auto y2 = std::stoi(seenProgramResult.get("y2").value);
+                        programTransform.translate(x1, y1);
+                        auto angleDegrees = atan2(y2 - y1, x2 - x1) * 180 / 3.14159265;
                         programTransform.rotate(angleDegrees);
                     }
-                    main_seen_program_ids_index++;
                 }
                 textureTarget = &renderTexture;
             }
@@ -282,6 +349,7 @@ class GraphicsManager {
         const sf::Texture &topRenderTextureCopy = topRenderTexture.getTexture();
         sf::Sprite topRenderTextureSprite(topRenderTextureCopy);
         window.draw(topRenderTextureSprite);
+        window.display();
     }
 
   private:
