@@ -2,6 +2,8 @@
 #include "SelbaWard/Line.cpp"
 #include <SFML/Graphics.hpp>
 #include <nlohmann/json.hpp>
+#include <sfeMovie/Movie.hpp>
+
 using nlohmann::json;
 
 struct Illumination {
@@ -15,7 +17,8 @@ struct Illumination {
             "line", &Illumination::line,
             "text", &Illumination::text,
             "frame", &Illumination::frame,
-            "image", &Illumination::image);
+            "image", &Illumination::image,
+            "movie", &Illumination::movie);
     }
 
     std::vector<int> get_color_from_lua_table(sol::table &opts, std::string key, std::vector<int> fallbackColor) {
@@ -103,6 +106,15 @@ struct Illumination {
         std::string filepath = opts["filepath"];
         graphics.push_back({{"type", "image"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"filepath", filepath}}}});
     }
+
+    void movie(sol::table opts) {
+        int x = get_int_from_lua_table(opts, "x", 0);
+        int y = get_int_from_lua_table(opts, "y", 0);
+        int w = get_int_from_lua_table(opts, "w", 10);
+        int h = get_int_from_lua_table(opts, "h", 10);
+        std::string filepath = opts["filepath"];
+        graphics.push_back({{"type", "movie"}, {"options", {{"x", x}, {"y", y}, {"w", w}, {"h", h}, {"filepath", filepath}}}});
+    }
 };
 std::ostream &operator<<(std::ostream &os, const Illumination &ill) {
     os << ill.graphics;
@@ -112,6 +124,7 @@ std::ostream &operator<<(std::ostream &os, const Illumination &ill) {
 class GraphicsManager {
   private:
     std::map<std::string, sf::Texture *> textureMap;
+    std::map<std::string, sfe::Movie *> movieMap;
     sf::Font font;
     sf::RenderTexture renderTexture;
     sf::RenderTexture topRenderTexture;
@@ -323,12 +336,26 @@ class GraphicsManager {
                         sprite.setPosition(sf::Vector2f(x, y));
                         sprite.setScale(scale, scale);
                         textureTarget->draw(sprite, programTransform);
+                    } else if (typ == "movie") {
+                        auto x = g["options"]["x"];
+                        auto y = g["options"]["y"];
+                        auto w = g["options"]["w"];
+                        auto h = g["options"]["h"];
+                        auto filepath = g["options"]["filepath"];
+                        auto movie = getMovie(movieMap, filepath);
+                        movie->fit(x, y, w, h);
+                        if (movie->getStatus() != sfe::Playing) {
+                            movie->play();
+                        }
+                        movie->update();
+                        textureTarget->draw(*movie, programTransform);
                     }
                 } catch (const std::exception &e) {
                     std::cout << "Exception when running graphics " << g << " " << e.what() << std::endl;
                 }
             }
         }
+
         renderTexture.display();
         topRenderTexture.display();
         const sf::Texture &renderTextureCopy = renderTexture.getTexture();
@@ -378,5 +405,32 @@ class GraphicsManager {
         m_textureMap[filePath] = texture;
 
         return m_textureMap[filePath];
+    }
+
+    sfe::Movie *
+    getMovie(std::map<std::string, sfe::Movie *> &m_movieMap, const std::string filePath) {
+        // copied from https://github.com/Jfeatherstone/SFMLResource/blob/master/src/ResourceManager.cpp
+        // Search through the map to see if there is already an entry
+        for (auto element : m_movieMap) {
+            // We also want to check that the path is not invalid, as otherwise it would just be
+            // stuck as invalid, because it would technically have an entry in the map
+            if (element.first == filePath) // && element.first != m_invalidTexture)
+                return element.second;
+        }
+
+        // If the code has made it to this point, it hasn't found a matching entry
+        // in the map. We use the new keyword because we want to store these variables
+        // outside of the stack
+        sfe::Movie *movie = new sfe::Movie();
+
+        // If the texture doesn't load properly, we assign our invalid texture to it
+        if (!movie->openFromFile(filePath)) {
+            std::cout << "ERROR LOADING MOVIE" << std::endl;
+            // TODO: show some visual error if file not found
+        }
+
+        m_movieMap[filePath] = movie;
+
+        return m_movieMap[filePath];
     }
 };

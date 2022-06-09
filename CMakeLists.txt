@@ -24,6 +24,19 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} ${CONAN_LIBS})
 
+# sfeMovie
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+set(SFEMOVIE_ROOT "/Users/jacob.haip/Personal/sfeMovie/bin")
+set( SFEMOVIE_STATIC_LIBRARIES TRUE )
+find_package(sfeMovie REQUIRED)
+if (SFEMOVIE_FOUND)
+    message("SFE MOVIE FOUND")
+    include_directories(${PROJECT_NAME} ${SFEMOVIE_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} ${SFEMOVIE_LIB} ${SFEMOVIE_LIBRARY})
+else()
+    message("SFE MOVIE NOT FOUND")
+endif()
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/scripts/ $<TARGET_FILE_DIR:${PROJECT_NAME}>
