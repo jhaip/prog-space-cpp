@@ -71,7 +71,13 @@ int main() {
                                          "../../scripts/18__controlLights.lua",
                                          "../../scripts/19__controlLights2.lua",
                                          "../../scripts/20__calibration.lua",
-                                         "../../scripts/21__showFps.lua"});
+                                         "../../scripts/21__showFps.lua",
+                                         "", // 22
+                                         "", // 23
+                                         "", // 24
+                                         "", // 25
+                                         "", // 26
+                                         "../../scripts/27__movie.lua"});
     sourceCodeManager.init(db);
 
     HTTPServer httpServerInstance(new MyRequestHandlerFactory{db}, ServerSocket(9090), new HTTPServerParams);
