@@ -42,6 +42,14 @@ struct Illumination {
         }
         return (int)val;
     }
+    float get_float_from_lua_table(sol::table &opts, std::string key, float fallback) {
+        double val = fallback;
+        auto luaTable = opts[key];
+        if (luaTable.valid()) {
+            val = luaTable;
+        }
+        return (float)val;
+    }
 
     void rectangle(sol::table opts) {
         int x = get_int_from_lua_table(opts, "x", 0);
@@ -81,7 +89,7 @@ struct Illumination {
     void text(sol::table opts) {
         int x = get_int_from_lua_table(opts, "x", 0);
         int y = get_int_from_lua_table(opts, "y", 0);
-        int fontSize = get_int_from_lua_table(opts, "size", 30);
+        int fontSize = get_int_from_lua_table(opts, "size", 12);
         std::vector<int> fallbackColor = {255, 255, 255, 255};
         std::vector<int> color = get_color_from_lua_table(opts, "color", fallbackColor);
         std::string text = opts["text"];
@@ -100,9 +108,9 @@ struct Illumination {
     }
 
     void image(sol::table opts) {
-        int x = opts.get_or("x", 0);
-        int y = opts.get_or("y", 0);
-        int scale = opts.get_or("scale", 1);
+        int x = get_int_from_lua_table(opts, "x", 0);
+        int y = get_int_from_lua_table(opts, "y", 0);
+        float scale = get_float_from_lua_table(opts, "scale", 1.0f);
         std::string filepath = opts["filepath"];
         graphics.push_back({{"type", "image"}, {"options", {{"x", x}, {"y", y}, {"scale", scale}, {"filepath", filepath}}}});
     }
