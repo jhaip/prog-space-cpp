@@ -12,14 +12,16 @@ when("16", {"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"}, function (resul
         local y3 = tonumber(result["y3"])
         local x4 = tonumber(result["x4"])
         local y4 = tonumber(result["y4"])
-        if id == 5 then
-            claim("#16 subframe 0 at "..x1.." "..y1)
-        elseif id == 7 then
-            claim("#16 subframe 1 at "..x1.." "..y1)
-        elseif id == 10 then
-            claim("#16 subframe 2 at "..x1.." "..y1)
-        elseif id == 4 then
-            claim("#16 subframe 3 at "..x1.." "..y1)
+        local x = math.min(x1, x2, x3, x4) - 50
+        local y = math.min(y1, y2, y3, y4) -100
+        if id == 23 then
+            claim("#16 subframe 0 at "..x.." "..y)
+        elseif id == 24 then
+            claim("#16 subframe 1 at "..x.." "..y)
+        elseif id == 25 then
+            claim("#16 subframe 2 at "..x.." "..y)
+        elseif id == 26 then
+            claim("#16 subframe 3 at "..x.." "..y)
         end
     end
 end)
@@ -41,7 +43,7 @@ when("16", {"$ clock time is $time", "#16 current frame is $i at $frametime", "#
             claim("#16 current frame is "..new_i.." at "..result["frametime"])
         end
         local ill = Illumination.new()
-        ill:frame{x=0, y=50, clip_x=x1, clip_y=y1+50, clip_w=120, clip_h=120}
+        ill:frame{x=0, y=50, clip_x=x1, clip_y=y1, clip_w=100, clip_h=100}
         ill:text{x=50, y=0, text=tostring(new_i)}
         claim("#16 wish you had graphics", {"", tostring(ill)})
     end

@@ -1,7 +1,7 @@
 claim("#17 text cache is -")
 claim("#17 text cursor at 0 0")
 
-when("17", {"$ 3 source code $code"}, function (results)
+when("17", {"$ 27 source code $code"}, function (results)
     for index, result in ipairs(results) do
         retract("#17 text cache is %")
         claim("#17 text cache is", {"", result["code"]})
@@ -65,7 +65,7 @@ when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ text curso
             cache = cache:sub(1, cursor_position_in_text) .. "\"" .. cache:sub(cursor_position_in_text+1)
             new_cursor_x = new_cursor_x + 1
         elseif key == "CONTROL-s" then
-            claim("#17 wish 3 source code is", {"", cache})
+            claim("#17 wish 27 source code is", {"", cache})
         elseif key == "CONTROL-p" then
             print("print me!")
         elseif key == "RIGHT" then
