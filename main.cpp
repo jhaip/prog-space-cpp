@@ -77,7 +77,8 @@ int main() {
                                          "", // 24
                                          "", // 25
                                          "", // 26
-                                         "../../scripts/27__movie.lua"});
+                                         "../../scripts/27__movie.lua",
+                                         "../../scripts/28__movie.lua"});
     sourceCodeManager.init(db);
 
     HTTPServer httpServerInstance(new MyRequestHandlerFactory{db}, ServerSocket(9090), new HTTPServerParams);
