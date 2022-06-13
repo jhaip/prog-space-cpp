@@ -6,7 +6,16 @@ void cvLoop() {
     inputVideo.open(0);
     cv::Mat cameraMatrix;
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_1000);
+    float fps;
+    sf::Clock clock;
+    sf::Time previousTime = clock.getElapsedTime();
+    sf::Time currentTime;
     while (!stop_cv_thread && inputVideo.grab()) {
+        currentTime = clock.getElapsedTime();
+        fps = 1.0f / (currentTime.asSeconds() - previousTime.asSeconds()); // the asSeconds returns a float
+        // std::cout << "cv fps =" << floor(fps) << std::endl; // flooring it will make the frame rate a rounded number
+        previousTime = currentTime;
+
         cv::Mat image, imageCopy;
         inputVideo.retrieve(image);
         image.copyTo(imageCopy);

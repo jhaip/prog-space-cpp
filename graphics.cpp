@@ -256,6 +256,8 @@ class GraphicsManager {
                     }
                 }
                 textureTarget = &renderTexture;
+            } else if (targetStr == "all") {
+                textureTarget = &renderTexture;
             }
 
             for (auto &g : j) {
