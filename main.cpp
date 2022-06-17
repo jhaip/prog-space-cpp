@@ -99,22 +99,10 @@ int main() {
         // std::cout << "fps =" << floor(fps) << std::endl; // flooring it will make the frame rate a rounded number
         previousTime = currentTime;
 
-        std::vector<int> newlySeenPrograms;
-        std::vector<int> programsThatDied;
         {
             std::scoped_lock guard(myMutex);
             if (new_data_available) {
                 new_data_available = false;
-                for (auto &id : seen_program_ids) {
-                    if (std::find(main_seen_program_ids.begin(), main_seen_program_ids.end(), id) == main_seen_program_ids.end()) {
-                        newlySeenPrograms.emplace_back(id);
-                    }
-                }
-                for (auto &id : main_seen_program_ids) {
-                    if (std::find(seen_program_ids.begin(), seen_program_ids.end(), id) == seen_program_ids.end()) {
-                        programsThatDied.emplace_back(id);
-                    }
-                }
                 main_seen_program_ids = seen_program_ids;
                 main_seen_program_corners = seen_program_corners;
 
@@ -151,7 +139,7 @@ int main() {
             db.claim("#0 fps is " + std::to_string((int)fps));
             db.claim("#0 clock time is " + std::to_string(loopCount));
             loopCount += 1;
-            sourceCodeManager.update(db, programsThatDied, newlySeenPrograms);
+            sourceCodeManager.update(db);
             calibrationManager.update(db);
             graphicsManager.update(db, latestFrameTexture);
             debugWindowManager.update(db, latestFrameTexture);

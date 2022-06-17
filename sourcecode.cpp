@@ -5,6 +5,7 @@ class SourceCodeManager {
     sol::state lua;
     std::vector<std::string> scriptPaths;
     std::vector<std::string> scriptsSourceCodes;
+    std::vector<int> prevSeenPrograms;
 
   public:
     SourceCodeManager(std::vector<std::string> _scriptPaths) : scriptPaths(_scriptPaths), scriptsSourceCodes(scriptPaths.size()) {}
@@ -44,7 +45,26 @@ class SourceCodeManager {
             db.cleanup(std::to_string(id));
         }
     }
-    void update(Database &db, std::vector<int> &programsThatDied, std::vector<int> &newlySeenPrograms) {
+    void update(Database &db) {
+        auto seenProgramResults = db.select({"$ program $id at $ $ $ $ $ $ $ $"});
+        std::vector<int> seenPrograms(seenProgramResults.size());
+        std::transform(seenProgramResults.begin(), seenProgramResults.end(), seenPrograms.begin(),
+            [](auto result){ return std::stoi(result.get("id").value); });
+        
+        std::vector<int> newlySeenPrograms;
+        std::vector<int> programsThatDied;
+        for (auto &id : seenPrograms) {
+            if (std::find(prevSeenPrograms.begin(), prevSeenPrograms.end(), id) == prevSeenPrograms.end()) {
+                newlySeenPrograms.emplace_back(id);
+            }
+        }
+        for (auto &id : prevSeenPrograms) {
+            if (std::find(seenPrograms.begin(), seenPrograms.end(), id) == seenPrograms.end()) {
+                programsThatDied.emplace_back(id);
+            }
+        }
+        prevSeenPrograms = seenPrograms;
+
         for (auto &id : programsThatDied) {
             stop_program(db, id);
         }
