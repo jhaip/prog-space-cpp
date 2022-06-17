@@ -1,5 +1,6 @@
 #include <opencv2/aruco.hpp>
 #include <opencv2/core/core.hpp>
+// #include "aruco_nano.h"
 
 void cvLoop() {
     VideoCapture inputVideo;
@@ -27,6 +28,12 @@ void cvLoop() {
             cv::aruco::drawDetectedMarkers(imageCopy, corners, ids);
             // std::cout << "Seen ID" << ids[0] << std::endl;
         }
+        // auto markers = aruconano::MarkerDetector::detect(image);
+        // for(const auto &m:markers) {
+        //     m.draw(imageCopy);
+        //     ids.emplace_back(m.id);
+        //     corners.emplace_back(m);
+        // }
         {
             std::scoped_lock guard(myMutex);
             seen_program_ids = ids;
