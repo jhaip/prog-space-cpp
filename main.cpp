@@ -41,8 +41,6 @@ int main() {
     int CAMERA_WIDTH = 1920;
     int CAMERA_HEIGHT = 1080;
 
-    std::vector<int> main_seen_program_ids;
-    std::vector<std::vector<cv::Point2f>> main_seen_program_corners;
     cv::Mat main_latestFrame;
     sf::Image latestFrameImage;
     sf::Texture latestFrameTexture;
@@ -103,18 +101,16 @@ int main() {
             std::scoped_lock guard(myMutex);
             if (new_data_available) {
                 new_data_available = false;
-                main_seen_program_ids = seen_program_ids;
-                main_seen_program_corners = seen_program_corners;
 
                 {
                     std::scoped_lock guard(dbMutex);
                     db.remove_claims_from_source("0cv");
                     int index = 0;
-                    for (auto &id : main_seen_program_ids) {
-                        cv::Point2f corner0 = main_seen_program_corners.at(index).at(0);
-                        cv::Point2f corner1 = main_seen_program_corners.at(index).at(1);
-                        cv::Point2f corner2 = main_seen_program_corners.at(index).at(2);
-                        cv::Point2f corner3 = main_seen_program_corners.at(index).at(3);
+                    for (auto &id : seen_program_ids) {
+                        cv::Point2f corner0 = seen_program_corners.at(index).at(0);
+                        cv::Point2f corner1 = seen_program_corners.at(index).at(1);
+                        cv::Point2f corner2 = seen_program_corners.at(index).at(2);
+                        cv::Point2f corner3 = seen_program_corners.at(index).at(3);
                         db.claim("#0cv program " + std::to_string(id) + " at " +
                                  std::to_string(corner0.x) + " " + std::to_string(corner0.y) + " " +
                                  std::to_string(corner1.x) + " " + std::to_string(corner1.y) + " " +

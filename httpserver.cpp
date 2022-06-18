@@ -1,19 +1,30 @@
+#include "Poco/Net/HTTPServer.h"
+#include "Poco/Format.h"
 #include "Poco/JSON/Object.h"
 #include "Poco/JSON/Parser.h"
 #include "Poco/JSON/Stringifier.h"
-#include <Poco/Net/HTTPRequestHandler.h>
-#include <Poco/Net/HTTPRequestHandlerFactory.h>
+#include "Poco/Net/HTTPRequestHandler.h"
+#include "Poco/Net/HTTPRequestHandlerFactory.h"
+#include "Poco/Net/HTTPServerRequest.h"
+#include "Poco/Net/HTTPServerResponse.h"
+#include "Poco/Net/NetException.h"
+#include "Poco/Net/WebSocket.h"
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/Net/HTTPServer.h>
-#include <Poco/Net/HTTPServerRequest.h>
-#include <Poco/Net/HTTPServerResponse.h>
-#include <Poco/Net/ServerSocket.h>
 #include <Poco/URI.h>
 #include <iostream>
 #include <string>
 #include <vector>
 
 using namespace Poco::Net;
+using Poco::Net::HTTPRequestHandler;
+using Poco::Net::HTTPRequestHandlerFactory;
+using Poco::Net::HTTPResponse;
+using Poco::Net::HTTPServer;
+using Poco::Net::HTTPServerRequest;
+using Poco::Net::HTTPServerResponse;
+using Poco::Net::WebSocket;
+using Poco::Net::WebSocketException;
 using namespace std;
 
 class MyRequestHandler : public HTTPRequestHandler {
@@ -124,7 +135,7 @@ class MySelectRequestHandler : public HTTPRequestHandler {
     Database &db;
 };
 
-class ErroPageHandler : public Poco::Net::HTTPRequestHandler {
+class ErrorPageHandler : public Poco::Net::HTTPRequestHandler {
   public:
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) {
         response.setChunkedTransferEncoding(true);
@@ -143,6 +154,111 @@ class ErroPageHandler : public Poco::Net::HTTPRequestHandler {
     };
 };
 
+class PageRequestHandler : public HTTPRequestHandler
+/// Return a HTML document with some JavaScript creating
+/// a WebSocket connection.
+{
+  public:
+    void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
+        response.setChunkedTransferEncoding(true);
+        response.setContentType("text/html");
+        std::ostream &ostr = response.send();
+        ostr << "<html>";
+        ostr << "<head>";
+        ostr << "<title>WebSocketServer</title>";
+        ostr << "<script type=\"text/javascript\">";
+        ostr << "function WebSocketTest()";
+        ostr << "{";
+        ostr << "  if (\"WebSocket\" in window)";
+        ostr << "  {";
+        ostr << "    var ws = new WebSocket(\"ws://" << request.serverAddress().toString() << "/ws\");";
+        ostr << "    ws.onopen = function()";
+        ostr << "      {";
+        ostr << "        ws.send(\"Hello, world!\");";
+        ostr << "      };";
+        ostr << "    ws.onmessage = function(evt)";
+        ostr << "      { ";
+        ostr << "        var msg = evt.data;";
+        ostr << "        alert(\"Message received: \" + msg);";
+        ostr << "        ws.close();";
+        ostr << "      };";
+        ostr << "    ws.onclose = function()";
+        ostr << "      { ";
+        ostr << "        alert(\"WebSocket closed.\");";
+        ostr << "      };";
+        ostr << "  }";
+        ostr << "  else";
+        ostr << "  {";
+        ostr << "     alert(\"This browser does not support WebSockets.\");";
+        ostr << "  }";
+        ostr << "}";
+        ostr << "</script>";
+        ostr << "</head>";
+        ostr << "<body>";
+        ostr << "  <h1>WebSocket Server</h1>";
+        ostr << "  <p><a href=\"javascript:WebSocketTest()\">Run WebSocket Script</a></p>";
+        ostr << "</body>";
+        ostr << "</html>";
+    }
+};
+
+class WebSocketRequestHandler : public HTTPRequestHandler
+/// Handle a WebSocket connection.
+{
+  public:
+    WebSocketRequestHandler(Database &_db)
+        : db(_db) {}
+
+    void handleRequest(HTTPServerRequest &request, HTTPServerResponse &response) {
+        std::cout << "handling ws req\n";
+        // Application &app = Application::instance();
+        try {
+            std::cout << "trying\n";
+            WebSocket ws(request, response);
+            std::cout << "WebSocket connection established.\n";
+            // app.logger().information("WebSocket connection established.");
+            char buffer[1024];
+            int flags;
+            int n;
+            do {
+                n = ws.receiveFrame(buffer, sizeof(buffer), flags);
+                // app.logger().information(Poco::format("Frame received (length=%d, flags=0x%x).", n, unsigned(flags)));
+                if (n > 0) {
+                    std::string rcvStr(buffer);
+                    // TODO: parse rcvStr into json
+                    // TODO: take lock on db so this is safe
+                    db.retract("#0ws %");
+                    db.claim("#0ws " + rcvStr);
+                }
+                std::cout << Poco::format("Frame received (length=%d, flags=0x%x).", n, unsigned(flags)) << std::endl;
+                ws.sendFrame(buffer, n, flags);
+            } while (n > 0 && (flags & WebSocket::FRAME_OP_BITMASK) != WebSocket::FRAME_OP_CLOSE);
+            // app.logger().information("WebSocket connection closed.");
+            std::cout << "WebSocket connection closed.\n";
+        } catch (WebSocketException &exc) {
+            std::cout << "websocket execption\n";
+            // app.logger().log(exc);
+            switch (exc.code()) {
+            case WebSocket::WS_ERR_HANDSHAKE_UNSUPPORTED_VERSION:
+                response.set("Sec-WebSocket-Version", WebSocket::WEBSOCKET_VERSION);
+                // fallthrough
+            case WebSocket::WS_ERR_NO_HANDSHAKE:
+            case WebSocket::WS_ERR_HANDSHAKE_NO_VERSION:
+            case WebSocket::WS_ERR_HANDSHAKE_NO_KEY:
+                response.setStatusAndReason(HTTPResponse::HTTP_BAD_REQUEST);
+                response.setContentLength(0);
+                response.send();
+                break;
+            }
+        } catch (const std::exception &e) {
+            std::cerr << "ERROR: " << e.what() << std::endl;
+        }
+    }
+
+  private:
+    Database &db;
+};
+
 int MyRequestHandler::count = 0;
 
 class MyRequestHandlerFactory : public HTTPRequestHandlerFactory {
@@ -151,6 +267,9 @@ class MyRequestHandlerFactory : public HTTPRequestHandlerFactory {
         : db(_db) {}
 
     virtual HTTPRequestHandler *createRequestHandler(const HTTPServerRequest &req) {
+        if (req.find("Upgrade") != req.end() && Poco::icompare(req["Upgrade"], "websocket") == 0) {
+            return new WebSocketRequestHandler{db};
+        }
         const Poco::URI uri(req.getURI());
         if (uri.getPath() == "/") {
             return new MyRequestHandler{db};
@@ -158,7 +277,10 @@ class MyRequestHandlerFactory : public HTTPRequestHandlerFactory {
         if (uri.getPath() == "/select") {
             return new MySelectRequestHandler{db};
         }
-        return new ErroPageHandler();
+        if (uri.getPath() == "/wstest") {
+            return new PageRequestHandler;
+        }
+        return new ErrorPageHandler();
     }
 
   private:
