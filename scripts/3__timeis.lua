@@ -1,4 +1,4 @@
-claim("wish \"http://192.168.1.34:5000/myfile_0.png\" would be thermal printed")
+claim("wish \"http://192.168.1.22:8000/smiley.png\" would be thermal printed")
 cache = {}
 
 function draw(t)
@@ -8,6 +8,7 @@ function draw(t)
 end
 
 when({"$ clock time is $t"}, function (results)
+    -- print("clock "..sub_id)
     retract("#3 time is %")
     retract("#3 wish you had graphics %")
     for index, result in ipairs(results) do
@@ -17,6 +18,7 @@ when({"$ clock time is $t"}, function (results)
 end)
 
 when({"$ fps is $fps"}, function (results)
+    -- print("fps "..sub_id)
     retract("#3 wish window had graphics %")
     for index, result in ipairs(results) do
         table.insert(cache, result["fps"])
