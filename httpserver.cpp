@@ -135,6 +135,51 @@ class MySelectRequestHandler : public HTTPRequestHandler {
     Database &db;
 };
 
+class MyBatchRequestHandler : public HTTPRequestHandler {
+  public:
+    MyBatchRequestHandler(Database &_db)
+        : db(_db) {}
+
+    virtual void handleRequest(HTTPServerRequest &req, HTTPServerResponse &resp) {
+        resp.setStatus(HTTPResponse::HTTP_OK);
+        resp.setContentType("application/json");
+        resp.set("Access-Control-Allow-Origin", "*");
+
+        auto &stream = req.stream();
+        const size_t len = req.getContentLength();
+        std::string buffer(len, 0);
+        stream.read(buffer.data(), len);
+
+        // [{"type": "retract", "fact": ""}, {"type": "claim", "fact": ""}]
+        Poco::JSON::Parser parser;
+        Poco::Dynamic::Var result = parser.parse(buffer);
+        Poco::JSON::Array::Ptr arr = result.extract<Poco::JSON::Array::Ptr>();
+        Poco::JSON::Object::Iterator it;
+        {
+            std::scoped_lock guard(dbMutex);
+            for (Poco::JSON::Array::ConstIterator it = arr->begin(); it != arr->end(); ++it) {
+                Poco::JSON::Object::Ptr r = it->extract<Poco::JSON::Object::Ptr>();
+                auto type = r->getValue<std::string>("type");
+                auto factStr = r->getValue<std::string>("fact");
+                if (type == "retract") {
+                    std::cout << "making retract: " << factStr << std::endl;
+                    db.retract(factStr);
+                } else if (type == "claim") {
+                    std::cout << "making claim: " << factStr << std::endl;
+                    db.claim(factStr);
+                }
+            }
+        }
+
+        ostream &out = resp.send();
+        out << "ok";
+        out.flush();
+    }
+
+  private:
+    Database &db;
+};
+
 class ErrorPageHandler : public Poco::Net::HTTPRequestHandler {
   public:
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response) {
@@ -276,6 +321,9 @@ class MyRequestHandlerFactory : public HTTPRequestHandlerFactory {
         }
         if (uri.getPath() == "/select") {
             return new MySelectRequestHandler{db};
+        }
+        if (uri.getPath() == "/batch") {
+            return new MyBatchRequestHandler{db};
         }
         if (uri.getPath() == "/wstest") {
             return new PageRequestHandler;
