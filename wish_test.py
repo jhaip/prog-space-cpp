@@ -3,7 +3,6 @@ import urllib.parse
 import time
 
 def update():
-    # get wishes from broker
     try:
         resp = requests.get("http://localhost:9090/select?query={}".format(
             urllib.parse.quote_plus("[\"$ wish $url would be thermal printed\"]")))
