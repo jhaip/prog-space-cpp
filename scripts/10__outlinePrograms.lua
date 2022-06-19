@@ -1,4 +1,4 @@
-when("10", {"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"}, function (results)
+when({"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"}, function (results)
     retract("#10 %")
     for index, result in ipairs(results) do
         local x1 = tonumber(result["x1"])
@@ -14,6 +14,6 @@ when("10", {"$ program $id at $x1 $y1 $x2 $y2 $x3 $y3 $x4 $y4"}, function (resul
         -- ill:line{x1=x2, y1=y2, x2=x3, y2=y3}
         -- ill:line{x1=x3, y1=y3, x2=x4, y2=y4}
         -- ill:line{x1=x4, y1=y4, x2=x1, y2=y1}
-        claim("#10 wish all had graphics", {"", tostring(ill)})
+        claim("wish all had graphics", {"", tostring(ill)})
     end
 end)

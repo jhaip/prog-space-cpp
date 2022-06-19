@@ -208,6 +208,15 @@ class Database {
             std::cout << "Claim:" << fact.toString() << std::endl;
         facts.push_back(fact);
     }
+    void claim(const Fact &fact, sol::this_environment te) {
+        sol::environment &env = te;
+        Fact new_fact{fact};
+        new_fact.terms.insert(new_fact.terms.begin(), Term{"id", std::to_string(env.get_or("you", 0))});
+        if (debug)
+            std::cout
+                << "Claim:" << fact.toString() << std::endl;
+        facts.push_back(new_fact);
+    }
 
     std::vector<QueryResult> collect_solutions(const std::vector<Fact> &query, const QueryResult &env) {
         // std::cout << "collect solutions" << std::endl;
@@ -239,7 +248,9 @@ class Database {
         return r;
     }
 
-    void when(std::string source, std::vector<std::string> query_parts, sol::protected_function callback_func) {
+    void when(std::vector<std::string> query_parts, sol::protected_function callback_func, sol::this_environment te) {
+        sol::environment &env = te;
+        std::string source = std::to_string(env.get_or("you", 0));
         subscriptions.push_back(Subscription{source, query_parts, callback_func});
     }
 

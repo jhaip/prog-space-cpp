@@ -14,7 +14,7 @@ function drawAruco(startx, starty, size, code)
             end
         end
     end
-    claim("#20 wish all had graphics ", {"", tostring(ill)})
+    claim("wish all had graphics ", {"", tostring(ill)})
 end
 
 drawAruco(0, 0, 10, {

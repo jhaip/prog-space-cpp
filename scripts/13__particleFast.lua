@@ -2,9 +2,9 @@ p = ""
 for i = 0,200,1 do
     p = p.."20:"..tostring(1*i)..":"..(i*0.1)..":".."0.5:,"
 end
-claim("#13 particles "..p)
+claim("particles "..p)
 
-when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
+when({"$ particles $p", "$ clock time is $t"}, function (results)
     retract("#13 %")
     for index, result in ipairs(results) do
         new_particles = ""
@@ -32,7 +32,7 @@ when("13", {"$ particles $p", "$ clock time is $t"}, function (results)
             ill:ellipse{x=new_x, y=new_y, w=10, h=10}
             i = i + 1
         end
-        claim("#13 wish you had graphics", {"", tostring(ill)})
-        claim("#13 particles "..new_particles)
+        claim("wish you had graphics", {"", tostring(ill)})
+        claim("particles "..new_particles)
     end
 end)

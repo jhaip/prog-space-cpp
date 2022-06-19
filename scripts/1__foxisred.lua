@@ -1,1 +1,1 @@
-claim("#1 fox is red")
+claim("fox is red")

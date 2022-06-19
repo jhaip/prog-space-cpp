@@ -1,14 +1,14 @@
-claim("#17 text cache is -")
-claim("#17 text cursor at 0 0")
+claim("text cache is -")
+claim("text cursor at 0 0")
 
-when("17", {"$ 27 source code $code"}, function (results)
+when({"$ 27 source code $code"}, function (results)
     for index, result in ipairs(results) do
         retract("#17 text cache is %")
-        claim("#17 text cache is", {"", result["code"]})
+        claim("text cache is", {"", result["code"]})
     end
 end)
 
-when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
+when({"$ keyboard typed key $key", "$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
     for index, result in ipairs(results) do
         retract("#17 text cache is %")
         retract("#17 text cursor at %")
@@ -65,7 +65,7 @@ when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ text curso
             cache = cache:sub(1, cursor_position_in_text) .. "\"" .. cache:sub(cursor_position_in_text+1)
             new_cursor_x = new_cursor_x + 1
         elseif key == "CONTROL-s" then
-            claim("#17 wish 27 source code is", {"", cache})
+            claim("wish 27 source code is", {"", cache})
         elseif key == "CONTROL-p" then
             print("print me!")
         elseif key == "RIGHT" then
@@ -100,12 +100,12 @@ when("17", {"$ keyboard typed key $key", "$ text cache is $cache", "$ text curso
             cache = cache:sub(1, cursor_position_in_text) .. key .. cache:sub(cursor_position_in_text+1)
             new_cursor_x = new_cursor_x + 1
         end
-        claim("#17 text cache is", {"", cache})
-        claim("#17 text cursor at "..new_cursor_x.." "..new_cursor_y)
+        claim("text cache is", {"", cache})
+        claim("text cursor at "..new_cursor_x.." "..new_cursor_y)
     end
 end)
 
-when("17", {"$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
+when({"$ text cache is $cache", "$ text cursor at $x $y"}, function (results)
     retract("#17 wish you had graphics %")
     for index, result in ipairs(results) do
         local ill = Illumination.new()
@@ -121,6 +121,6 @@ when("17", {"$ text cache is $cache", "$ text cursor at $x $y"}, function (resul
         end
         w = w.."█"
         ill:text{x=0, y=50, text=w, color={255, 255, 255, 150}}
-        claim("#17 wish you had graphics", {"", tostring(ill)})
+        claim("wish you had graphics", {"", tostring(ill)})
     end
 end)

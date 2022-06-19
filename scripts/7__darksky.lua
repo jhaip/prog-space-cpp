@@ -1,4 +1,4 @@
-when("7", {"$ time is $time"}, function (results)
+when({"$ time is $time"}, function (results)
     retract("#7 %")
     for index, result in ipairs(results) do
         if tonumber(result["time"]) % 10 == 0 then
@@ -10,7 +10,7 @@ when("7", {"$ time is $time"}, function (results)
             --     local degrees = httpResults["currently"]["temperature"]
             --     local weatherType = httpResults["currently"]["icon"]
             --     cleanup("7")
-            --     claim("#7 weather forecast "..degrees.." F and "..weatherType)
+            --     claim("weather forecast "..degrees.." F and "..weatherType)
             -- end)
         end
     end
@@ -23,5 +23,5 @@ end)
 --     print(httpResults)
 --     local degrees = httpResults["currently"]["temperature"]
 --     local weatherType = httpResults["currently"]["icon"]
---     claim("#7 weather forecast "..degrees.." F and "..weatherType)
+--     claim("weather forecast "..degrees.." F and "..weatherType)
 -- end)

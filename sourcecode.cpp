@@ -24,10 +24,12 @@ class SourceCodeManager {
         init_lua_state(db);
     }
     void run_program(int id) {
+        sol::environment my_env(lua, sol::create, lua.globals());
+        my_env["you"] = id;
         if (id < scriptsSourceCodes.size()) {
             std::cout << "running " << id << std::endl;
             try {
-                auto result = lua.safe_script(scriptsSourceCodes[id], sol::script_pass_on_error);
+                auto result = lua.safe_script(scriptsSourceCodes[id], my_env, sol::script_pass_on_error);
                 if (!result.valid()) {
                     sol::error err = result;
                     std::cerr << "The code has failed to run!\n"
@@ -49,8 +51,8 @@ class SourceCodeManager {
         auto seenProgramResults = db.select({"$ program $id at $ $ $ $ $ $ $ $"});
         std::vector<int> seenPrograms(seenProgramResults.size());
         std::transform(seenProgramResults.begin(), seenProgramResults.end(), seenPrograms.begin(),
-            [](auto result){ return std::stoi(result.get("id").value); });
-        
+                       [](auto result) { return std::stoi(result.get("id").value); });
+
         std::vector<int> newlySeenPrograms;
         std::vector<int> programsThatDied;
         for (auto &id : seenPrograms) {
@@ -103,11 +105,11 @@ class SourceCodeManager {
     void init_lua_state(Database &db) {
         // open those basic lua libraries
         // again, for print() and other basic utilities
-        lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::coroutine, sol::lib::string, sol::lib::io, sol::lib::os);
+        lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::table, sol::lib::coroutine, sol::lib::string, sol::lib::io, sol::lib::os);
 
         Illumination::add_illumination_usertype_to_lua(lua);
 
-        lua.set_function("claim", [&db](sol::variadic_args va) {
+        lua.set_function("claim", [&db](sol::variadic_args va, sol::this_environment te) {
             std::vector<Term> terms;
             for (auto v : va) {
                 sol::optional<sol::table> table = v;
@@ -122,7 +124,7 @@ class SourceCodeManager {
                     }
                 }
             }
-            db.claim(Fact{terms});
+            db.claim(Fact{terms}, te);
         });
         lua.set_function("cleanup", &Database::cleanup, &db);
         lua.set_function("retract", &Database::retract, &db);
