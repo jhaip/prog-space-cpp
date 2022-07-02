@@ -4,7 +4,7 @@ openssl/1.1.1o
 sol2/3.2.3
 sfml/2.5.1
 opencv/4.5.1
-cpp-httplib/0.10.6
+cpp-httplib/0.10.8
 nlohmann_json/3.10.5
 poco/1.11.2
 

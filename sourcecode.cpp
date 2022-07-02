@@ -26,6 +26,7 @@ class SourceCodeManager {
     void run_program(int id) {
         sol::environment my_env(lua, sol::create, lua.globals());
         my_env["you"] = id;
+        my_env["sub_id"] = -1;
         if (id < scriptsSourceCodes.size()) {
             std::cout << "running " << id << std::endl;
             try {
@@ -99,6 +100,8 @@ class SourceCodeManager {
             }
             db.retract("$ wish $ source code is $");
         }
+
+        db.run_subscriptions(lua);
     }
 
   private:
@@ -130,7 +133,11 @@ class SourceCodeManager {
         lua.set_function("retract", &Database::retract, &db);
         lua.set_function("when", &Database::when, &db);
         lua.set_function("remove_subs", &Database::remove_subs, &db);
-        lua.set_function("http_request", http_request);
+        lua.set_function("convert_json", [](std::string jsonStr, sol::this_state ts) {
+            auto j = json::parse(jsonStr);
+            sol::state_view _lua = ts;
+            return jsonToLuaObject(j, _lua);
+        });
     }
     std::string read_file(std::string filepath) {
         std::ifstream t(filepath);

@@ -9,8 +9,6 @@
 
 #include "db.cpp"
 #include "graphics.cpp"
-#include "http.cpp"
-#include "sourcecode.cpp"
 
 // hack moving the definition before importing httpserver.cpp
 // because httpserver.cpp depends on it as a global variable
@@ -24,7 +22,9 @@ cv::Mat latestFrame;
 
 #include "calibration.cpp"
 #include "debugwindow.cpp"
+#include "http.cpp"
 #include "httpserver.cpp"
+#include "sourcecode.cpp"
 #include "vision.cpp"
 
 using namespace std::chrono;
@@ -44,6 +44,7 @@ int main() {
     cv::Mat main_latestFrame;
     sf::Image latestFrameImage;
     sf::Texture latestFrameTexture;
+    HTTPCallManager httpCallManager;
     CalibrationManager calibrationManager{SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA_WIDTH, CAMERA_HEIGHT};
     DebugWindowManager debugWindowManager{SCREEN_WIDTH, SCREEN_HEIGHT, CAMERA_WIDTH, CAMERA_HEIGHT};
     GraphicsManager graphicsManager{SCREEN_WIDTH, SCREEN_HEIGHT};
@@ -137,10 +138,9 @@ int main() {
             loopCount += 1;
             sourceCodeManager.update(db);
             calibrationManager.update(db);
+            httpCallManager.update(db);
             graphicsManager.update(db, latestFrameTexture);
             debugWindowManager.update(db, latestFrameTexture);
-
-            db.run_subscriptions();
         }
 
         sf::sleep(sf::seconds(1 / 60.0f) - sf::seconds(clock.getElapsedTime().asSeconds() - currentTime.asSeconds()));
