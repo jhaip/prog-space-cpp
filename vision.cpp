@@ -47,10 +47,11 @@ void cvLoop() {
 
 void fakeCvLoop() {
     std::scoped_lock guard(myMutex);
-    std::vector<int> my_seen_program_ids{17, 3, 21};
+    std::vector<int> my_seen_program_ids{17, 3, 7, 31};
     std::vector<std::vector<cv::Point2f>> my_seen_program_corners{
         {cv::Point2f{0, 50}, cv::Point2f{1, 50}, cv::Point2f{1, 51}, cv::Point2f{0, 51}},
         {cv::Point2f{0, 0}, cv::Point2f{1, 0}, cv::Point2f{1, 1}, cv::Point2f{0, 1}},
+        {cv::Point2f{0, 300}, cv::Point2f{1, 300}, cv::Point2f{1, 301}, cv::Point2f{0, 301}},
         {cv::Point2f{0, 300}, cv::Point2f{1, 300}, cv::Point2f{1, 301}, cv::Point2f{0, 301}}};
     seen_program_ids = my_seen_program_ids;
     seen_program_corners = my_seen_program_corners;

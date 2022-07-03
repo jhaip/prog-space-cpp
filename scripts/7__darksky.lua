@@ -1,7 +1,7 @@
 when({"$ time is $time"}, function (results)
     retract("#7 wish %")
     for index, result in ipairs(results) do
-        if tonumber(result["time"]) % 10 == 0 then
+        if tonumber(result["time"]) % 60 == 0 then
             print("making http request")
             darkSkyUrl = "https://api.darksky.net/forecast/ff4210a6ee0e933946c817939138eb1f/42.3601,-71.0589?exclude=minutely,hourly,alerts,flags"
             claim("wish http request to "..darkSkyUrl.." with id darksky")
